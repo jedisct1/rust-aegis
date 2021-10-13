@@ -13,3 +13,5 @@ large nonce size, and is key committing.
 - `aesni`: use an optimized implementation for x86 CPUs with AES extensions
 
 `std, aes_crate` is the default.
+
+`aesni` is about 2.8x faster than `aes_crate`.
