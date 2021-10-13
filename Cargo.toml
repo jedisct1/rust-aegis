@@ -12,11 +12,20 @@ categories = ["no-std", "cryptography"]
 readme = "README.md"
 
 [dependencies]
-aes = { version = "0.7.5", features = ["hazmat"] }
+aes = { version = "0.7.5", features = ["hazmat"], optional = true }
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "benchmark"
+harness = false
 
 [features]
-default = ["std"]
+default = ["std", "aes_crate"]
+aes_crate = ["aes"]
 std = []
+aesni = []
 
 [profile.release]
 codegen-units = 1

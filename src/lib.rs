@@ -1,5 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![forbid(unsafe_code)]
+
+#[cfg(not(feature = "aesni"))]
+mod aes_crate;
+#[cfg(not(feature = "aesni"))]
+use aes_crate::AesBlock;
+
+#[cfg(feature = "aesni")]
+mod aes_ni;
+#[cfg(feature = "aesni")]
+use aes_ni::AesBlock;
 
 use core::fmt;
 
@@ -18,50 +27,6 @@ impl fmt::Display for Error {
 
 #[cfg(feature = "std")]
 impl std::error::Error for Error {}
-
-#[derive(Copy, Clone, Debug, Default)]
-struct AesBlock(aes::Block);
-
-impl AesBlock {
-    #[inline]
-    fn from_bytes(bytes: &[u8]) -> AesBlock {
-        AesBlock(*aes::Block::from_slice(bytes))
-    }
-
-    #[inline]
-    fn as_bytes(&self) -> [u8; 16] {
-        let mut bytes = [0u8; 16];
-        bytes.copy_from_slice(self.0.as_slice());
-        bytes
-    }
-
-    #[inline]
-    fn xor(&self, other: AesBlock) -> AesBlock {
-        let s1 = self.0.as_slice();
-        let s2 = other.0.as_slice();
-        let mut res = AesBlock::default();
-        let s3 = res.0.as_mut_slice();
-        (0..16).for_each(|i| s3[i] = s1[i] ^ s2[i]);
-        res
-    }
-
-    #[inline]
-    fn and(&self, other: AesBlock) -> AesBlock {
-        let s1 = self.0.as_slice();
-        let s2 = other.0.as_slice();
-        let mut res = AesBlock::default();
-        let s3 = res.0.as_mut_slice();
-        (0..16).for_each(|i| s3[i] = s1[i] & s2[i]);
-        res
-    }
-
-    #[inline]
-    fn round(&self, rk: AesBlock) -> AesBlock {
-        let mut res = self.0;
-        aes::hazmat::cipher_round(&mut res, &rk.0);
-        AesBlock(res)
-    }
-}
 
 /// AEGIS-128L AEAD.
 pub mod aegis128l {
