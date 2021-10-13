@@ -150,6 +150,8 @@ pub mod aegis128l {
     pub struct Aegis128L(State);
 
     impl Aegis128L {
+        /// Create a new AEAD instance.
+        /// `key` and `nonce` must be 16 bytes long.
         pub fn new(nonce: &Nonce, key: &Key) -> Self {
             Aegis128L(State::new(key, nonce))
         }
@@ -158,8 +160,6 @@ pub mod aegis128l {
         /// # Arguments
         /// * `m` - Message
         /// * `ad` - Associated data
-        /// * `key` - AEGIS-128L key
-        /// * `nonce` - AEGIS-128L nonce
         /// # Returns
         /// Encrypted message and authentication tag.
         #[cfg(feature = "std")]
@@ -202,8 +202,6 @@ pub mod aegis128l {
         /// # Arguments
         /// * `mc` - Input and output buffer
         /// * `ad` - Associated data
-        /// * `key` - AEGIS-128L key
-        /// * `nonce` - AEGIS-128L nonce
         /// # Returns
         /// Encrypted message and authentication tag.
         pub fn encrypt_in_place(mut self, mc: &mut [u8], ad: &[u8]) -> Tag {
@@ -245,8 +243,6 @@ pub mod aegis128l {
         /// * `c` - Ciphertext
         /// * `tag` - Authentication tag
         /// * `ad` - Associated data
-        /// * `nonce` - AEGIS-128L nonce
-        /// * `key` - AEGIS-128L key
         /// # Returns
         /// Decrypted message.
         #[cfg(feature = "std")]
@@ -302,8 +298,6 @@ pub mod aegis128l {
         /// * `mc` - Input and output buffer
         /// * `tag` - Authentication tag
         /// * `ad` - Associated data
-        /// * `nonce` - AEGIS-128L nonce
-        /// * `key` - AEGIS-128L key
         pub fn decrypt_in_place(
             mut self,
             mc: &mut [u8],
