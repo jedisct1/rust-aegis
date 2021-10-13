@@ -6,7 +6,7 @@ fn test_encrypt(m: &[u8]) {
     let key = b"YELLOW SUBMARINE";
     let nonce = [0u8; 16];
 
-    let (c, tag) = Aegis128L::new(&nonce, &key).encrypt(m, ad);
+    let (c, tag) = Aegis128L::new(&nonce, key).encrypt(m, ad);
     black_box(c);
     black_box(tag);
 }

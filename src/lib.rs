@@ -369,7 +369,7 @@ mod tests {
         let key = b"YELLOW SUBMARINE";
         let nonce = [0u8; 16];
 
-        let (c, tag) = Aegis128L::new(&nonce, &key).encrypt(m, ad);
+        let (c, tag) = Aegis128L::new(&nonce, key).encrypt(m, ad);
         let expected_c = [
             137, 147, 98, 134, 30, 108, 100, 90, 185, 139, 110, 255, 169, 201, 98, 232, 138, 159,
             166, 71, 169, 80, 96, 205, 2, 109, 22, 101, 71, 138, 231, 79, 130, 148, 159, 175, 131,
@@ -385,7 +385,7 @@ mod tests {
         assert_eq!(c, expected_c);
         assert_eq!(tag, expected_tag);
 
-        let m2 = Aegis128L::new(&nonce, &key).decrypt(&c, &tag, ad).unwrap();
+        let m2 = Aegis128L::new(&nonce, key).decrypt(&c, &tag, ad).unwrap();
         assert_eq!(m2, m);
     }
 
@@ -397,7 +397,7 @@ mod tests {
         let nonce = [0u8; 16];
 
         let mut mc = m.to_vec();
-        let tag = Aegis128L::new(&nonce, &key).encrypt_in_place(&mut mc, ad);
+        let tag = Aegis128L::new(&nonce, key).encrypt_in_place(&mut mc, ad);
         let expected_mc = [
             137, 147, 98, 134, 30, 108, 100, 90, 185, 139, 110, 255, 169, 201, 98, 232, 138, 159,
             166, 71, 169, 80, 96, 205, 2, 109, 22, 101, 71, 138, 231, 79, 130, 148, 159, 175, 131,
@@ -413,7 +413,7 @@ mod tests {
         assert_eq!(mc, expected_mc);
         assert_eq!(tag, expected_tag);
 
-        Aegis128L::new(&nonce, &key)
+        Aegis128L::new(&nonce, key)
             .decrypt_in_place(&mut mc, &tag, ad)
             .unwrap();
         assert_eq!(mc, m);
