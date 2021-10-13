@@ -1,0 +1,24 @@
+[package]
+name = "aegis"
+version = "0.1.0"
+edition = "2018"
+authors = ["Frank Denis <github@pureftpd.org>"]
+description = "AEGIS authenticated cipher"
+keywords = ["aegis128", "cipher", "aead", "aes", "crypto"]
+license = "MIT"
+homepage = "https://github.com/jedisct1/rust-aegis"
+repository = "https://github.com/jedisct1/rust-aegis"
+categories = ["no-std", "cryptography"]
+readme = "README.md"
+
+[dependencies]
+aes = { version = "0.7.5", features = ["hazmat"] }
+
+[features]
+default = ["std"]
+std = []
+
+[profile.release]
+codegen-units = 1
+incremental = false
+panic = "abort"

@@ -1,0 +1,452 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
+
+use core::fmt;
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum Error {
+    InvalidTag,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::InvalidTag => write!(f, "Invalid tag"),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {}
+
+#[derive(Copy, Clone, Debug, Default)]
+struct AesBlock(aes::Block);
+
+impl AesBlock {
+    #[inline]
+    fn from_bytes(bytes: &[u8]) -> AesBlock {
+        AesBlock(*aes::Block::from_slice(bytes))
+    }
+
+    #[inline]
+    fn as_bytes(&self) -> [u8; 16] {
+        let mut bytes = [0u8; 16];
+        bytes.copy_from_slice(self.0.as_slice());
+        bytes
+    }
+
+    #[inline]
+    fn xor(&self, other: AesBlock) -> AesBlock {
+        let s1 = self.0.as_slice();
+        let s2 = other.0.as_slice();
+        let mut res = AesBlock::default();
+        let s3 = res.0.as_mut_slice();
+        (0..16).for_each(|i| s3[i] = s1[i] ^ s2[i]);
+        res
+    }
+
+    #[inline]
+    fn and(&self, other: AesBlock) -> AesBlock {
+        let s1 = self.0.as_slice();
+        let s2 = other.0.as_slice();
+        let mut res = AesBlock::default();
+        let s3 = res.0.as_mut_slice();
+        (0..16).for_each(|i| s3[i] = s1[i] & s2[i]);
+        res
+    }
+
+    #[inline]
+    fn round(&self, rk: AesBlock) -> AesBlock {
+        let mut res = self.0;
+        aes::hazmat::cipher_round(&mut res, &rk.0);
+        AesBlock(res)
+    }
+}
+
+/// AEGIS-128L AEAD.
+pub mod aegis128l {
+    use crate::AesBlock;
+    pub use crate::Error;
+
+    /// AEGIS-128L authentication tag
+    pub type Tag = [u8; 16];
+
+    /// AEGIS-128L key
+    pub type Key = [u8; 16];
+
+    /// AEGIS-128L nonce
+    pub type Nonce = [u8; 16];
+
+    struct State {
+        blocks: [AesBlock; 8],
+    }
+
+    impl State {
+        fn update(&mut self, d1: AesBlock, d2: AesBlock) {
+            let blocks = &mut self.blocks;
+            let tmp = blocks[7];
+            let mut i = 7;
+            while i > 0 {
+                blocks[i] = blocks[i - 1].round(blocks[i]);
+                i -= 1;
+            }
+            blocks[0] = tmp.round(blocks[0]);
+            blocks[0] = blocks[0].xor(d1);
+            blocks[4] = blocks[4].xor(d2);
+        }
+    }
+
+    impl State {
+        pub fn new(key: &[u8; 16], nonce: &[u8; 16]) -> Self {
+            let c1 = AesBlock::from_bytes(&[
+                0xdb, 0x3d, 0x18, 0x55, 0x6d, 0xc2, 0x2f, 0xf1, 0x20, 0x11, 0x31, 0x42, 0x73, 0xb5,
+                0x28, 0xdd,
+            ]);
+            let c2 = AesBlock::from_bytes(&[
+                0x00, 0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15, 0x22, 0x37, 0x59, 0x90, 0xe9,
+                0x79, 0x62,
+            ]);
+            let key_block = AesBlock::from_bytes(key);
+            let nonce_block = AesBlock::from_bytes(nonce);
+            let blocks: [AesBlock; 8] = [
+                key_block.xor(nonce_block),
+                c1,
+                c2,
+                c1,
+                key_block.xor(nonce_block),
+                key_block.xor(c2),
+                key_block.xor(c1),
+                key_block.xor(c2),
+            ];
+            let mut state = State { blocks };
+            for _ in 0..10 {
+                state.update(nonce_block, key_block);
+            }
+            state
+        }
+
+        fn enc(&mut self, dst: &mut [u8; 32], src: &[u8; 32]) {
+            let blocks = &self.blocks;
+            let msg0 = AesBlock::from_bytes(&src[..16]);
+            let msg1 = AesBlock::from_bytes(&src[16..32]);
+            let tmp0 = msg0
+                .xor(blocks[6])
+                .xor(blocks[1])
+                .xor(blocks[2].and(blocks[3]));
+            let tmp1 = msg1
+                .xor(blocks[2])
+                .xor(blocks[5])
+                .xor(blocks[6].and(blocks[7]));
+            dst[..16].copy_from_slice(&tmp0.as_bytes());
+            dst[16..32].copy_from_slice(&tmp1.as_bytes());
+            self.update(msg0, msg1);
+        }
+
+        fn dec(&mut self, dst: &mut [u8; 32], src: &[u8; 32]) {
+            let blocks = &self.blocks;
+            let msg0 = AesBlock::from_bytes(&src[0..16])
+                .xor(blocks[6])
+                .xor(blocks[1])
+                .xor(blocks[2].and(blocks[3]));
+            let msg1 = AesBlock::from_bytes(&src[16..32])
+                .xor(blocks[2])
+                .xor(blocks[5])
+                .xor(blocks[6].and(blocks[7]));
+            dst[..16].copy_from_slice(&msg0.as_bytes());
+            dst[16..32].copy_from_slice(&msg1.as_bytes());
+            self.update(msg0, msg1);
+        }
+
+        fn mac(&mut self, adlen: usize, mlen: usize) -> Tag {
+            let tmp = {
+                let blocks = &self.blocks;
+                let mut sizes = [0u8; 16];
+                sizes[..8].copy_from_slice(&(adlen as u64 * 8).to_le_bytes());
+                sizes[8..16].copy_from_slice(&(mlen as u64 * 8).to_le_bytes());
+                AesBlock::from_bytes(&sizes).xor(blocks[2])
+            };
+            for _ in 0..7 {
+                let tmp2 = tmp;
+                self.update(tmp, tmp2);
+            }
+            let blocks = &self.blocks;
+            let mac = blocks[0]
+                .xor(blocks[1])
+                .xor(blocks[2])
+                .xor(blocks[3])
+                .xor(blocks[4])
+                .xor(blocks[5])
+                .xor(blocks[6]);
+            mac.as_bytes()
+        }
+    }
+
+    /// Encrypts a message with AEGIS-128L
+    /// # Arguments
+    /// * `m` - Message
+    /// * `ad` - Associated data
+    /// * `key` - AEGIS-128L key
+    /// * `nonce` - AEGIS-128L nonce
+    /// # Returns
+    /// Encrypted message and authentication tag.
+    #[cfg(feature = "std")]
+    pub fn encrypt(m: &[u8], ad: &[u8], nonce: &Nonce, key: &Key) -> (Vec<u8>, Tag) {
+        let mlen = m.len();
+        let adlen = ad.len();
+        let mut c = Vec::with_capacity(mlen);
+        let mut state = State::new(key, nonce);
+        let mut src = [0u8; 32];
+        let mut dst = [0u8; 32];
+        let mut i = 0;
+        while i + 32 <= adlen {
+            src.copy_from_slice(&ad[i..][..32]);
+            state.enc(&mut dst, &src);
+            i += 32;
+        }
+        if adlen % 32 != 0 {
+            src.fill(0);
+            src[..adlen % 32].copy_from_slice(&ad[i..]);
+            state.enc(&mut dst, &src);
+        }
+        i = 0;
+        while i + 32 <= mlen {
+            src.copy_from_slice(&m[i..][..32]);
+            state.enc(&mut dst, &src);
+            c.extend_from_slice(&dst);
+            i += 32;
+        }
+        if mlen % 32 != 0 {
+            src.fill(0);
+            src[..mlen % 32].copy_from_slice(&m[i..]);
+            state.enc(&mut dst, &src);
+            c.extend_from_slice(&dst[..mlen % 32]);
+        }
+        let tag = state.mac(adlen, mlen);
+        (c, tag)
+    }
+
+    /// Encrypts a message in-place with AEGIS-128L
+    /// # Arguments
+    /// * `mc` - Input and output buffer
+    /// * `ad` - Associated data
+    /// * `key` - AEGIS-128L key
+    /// * `nonce` - AEGIS-128L nonce
+    /// # Returns
+    /// Encrypted message and authentication tag.
+    pub fn encrypt_in_place(mc: &mut [u8], ad: &[u8], nonce: &Nonce, key: &Key) -> Tag {
+        let mclen = mc.len();
+        let adlen = ad.len();
+        let mut state = State::new(key, nonce);
+        let mut src = [0u8; 32];
+        let mut dst = [0u8; 32];
+        let mut i = 0;
+        while i + 32 <= adlen {
+            src.copy_from_slice(&ad[i..][..32]);
+            state.enc(&mut dst, &src);
+            i += 32;
+        }
+        if adlen % 32 != 0 {
+            src.fill(0);
+            src[..adlen % 32].copy_from_slice(&ad[i..]);
+            state.enc(&mut dst, &src);
+        }
+        i = 0;
+        while i + 32 <= mclen {
+            src.copy_from_slice(&mc[i..][..32]);
+            state.enc(&mut dst, &src);
+            mc[i..][..32].copy_from_slice(&dst);
+            i += 32;
+        }
+        if mclen % 32 != 0 {
+            src.fill(0);
+            src[..mclen % 32].copy_from_slice(&mc[i..]);
+            state.enc(&mut dst, &src);
+            mc[i..].copy_from_slice(&dst[..mclen % 32]);
+        }
+
+        state.mac(adlen, mclen)
+    }
+
+    /// Decrypts a message with AEGIS-128L
+    /// # Arguments
+    /// * `c` - Ciphertext
+    /// * `tag` - Authentication tag
+    /// * `ad` - Associated data
+    /// * `nonce` - AEGIS-128L nonce
+    /// * `key` - AEGIS-128L key
+    /// # Returns
+    /// Decrypted message.
+    #[cfg(feature = "std")]
+    pub fn decrypt(
+        c: &[u8],
+        tag: &Tag,
+        ad: &[u8],
+        nonce: &Nonce,
+        key: &Key,
+    ) -> Result<Vec<u8>, Error> {
+        let clen = c.len();
+        let adlen = ad.len();
+        let mut m = Vec::with_capacity(clen);
+        let mut state = State::new(key, nonce);
+        let mut src = [0u8; 32];
+        let mut dst = [0u8; 32];
+        let mut i = 0;
+        while i + 32 <= adlen {
+            src.copy_from_slice(&ad[i..][..32]);
+            state.enc(&mut dst, &src);
+            i += 32;
+        }
+        if adlen % 32 != 0 {
+            src.fill(0);
+            src[..adlen % 32].copy_from_slice(&ad[i..]);
+            state.enc(&mut dst, &src);
+        }
+        i = 0;
+        while i + 32 <= clen {
+            src.copy_from_slice(&c[i..][..32]);
+            state.dec(&mut dst, &src);
+            m.extend_from_slice(&dst);
+            i += 32;
+        }
+        if clen % 32 != 0 {
+            src.fill(0);
+            src[..clen % 32].copy_from_slice(&c[i..]);
+            state.dec(&mut dst, &src);
+            m.extend_from_slice(&dst[..clen % 32]);
+            dst[..clen % 32].fill(0);
+            let blocks = &mut state.blocks;
+            blocks[0] = blocks[0].xor(AesBlock::from_bytes(&dst[..16]));
+            blocks[4] = blocks[4].xor(AesBlock::from_bytes(&dst[16..32]));
+        }
+        let tag2 = state.mac(adlen, clen);
+        let mut acc = 0;
+        for (a, b) in tag.iter().zip(tag2.iter()) {
+            acc |= a ^ b;
+        }
+        if acc != 0 {
+            m.fill(0xaa);
+            return Err(Error::InvalidTag);
+        }
+        Ok(m)
+    }
+
+    /// Decrypts a message in-place AEGIS-128L
+    /// # Arguments
+    /// * `mc` - Input and output buffer
+    /// * `tag` - Authentication tag
+    /// * `ad` - Associated data
+    /// * `nonce` - AEGIS-128L nonce
+    /// * `key` - AEGIS-128L key
+    pub fn decrypt_in_place(
+        mc: &mut [u8],
+        tag: &Tag,
+        ad: &[u8],
+        nonce: &Nonce,
+        key: &Key,
+    ) -> Result<(), Error> {
+        let mclen = mc.len();
+        let adlen = ad.len();
+        let mut state = State::new(key, nonce);
+        let mut src = [0u8; 32];
+        let mut dst = [0u8; 32];
+        let mut i = 0;
+        while i + 32 <= adlen {
+            src.copy_from_slice(&ad[i..][..32]);
+            state.enc(&mut dst, &src);
+            i += 32;
+        }
+        if adlen % 32 != 0 {
+            src.fill(0);
+            src[..adlen % 32].copy_from_slice(&ad[i..]);
+            state.enc(&mut dst, &src);
+        }
+        i = 0;
+        while i + 32 <= mclen {
+            src.copy_from_slice(&mc[i..][..32]);
+            state.dec(&mut dst, &src);
+            mc[i..][..32].copy_from_slice(&dst);
+            i += 32;
+        }
+        if mclen % 32 != 0 {
+            src.fill(0);
+            src[..mclen % 32].copy_from_slice(&mc[i..]);
+            state.dec(&mut dst, &src);
+            mc[i..].copy_from_slice(&dst[..mclen % 32]);
+            dst[..mclen % 32].fill(0);
+            let blocks = &mut state.blocks;
+            blocks[0] = blocks[0].xor(AesBlock::from_bytes(&dst[..16]));
+            blocks[4] = blocks[4].xor(AesBlock::from_bytes(&dst[16..32]));
+        }
+        let tag2 = state.mac(adlen, mclen);
+        let mut acc = 0;
+        for (a, b) in tag.iter().zip(tag2.iter()) {
+            acc |= a ^ b;
+        }
+        if acc != 0 {
+            mc.fill(0xaa);
+            return Err(Error::InvalidTag);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::aegis128l::*;
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_aegis() {
+        let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
+        let ad = b"Comment numero un";
+        let key = b"YELLOW SUBMARINE";
+        let nonce = [0u8; 16];
+
+        let (c, tag) = encrypt(m, ad, &nonce, key);
+        let expected_c = [
+            137, 147, 98, 134, 30, 108, 100, 90, 185, 139, 110, 255, 169, 201, 98, 232, 138, 159,
+            166, 71, 169, 80, 96, 205, 2, 109, 22, 101, 71, 138, 231, 79, 130, 148, 159, 175, 131,
+            148, 166, 200, 180, 159, 139, 138, 80, 104, 188, 50, 89, 53, 204, 111, 12, 212, 196,
+            143, 98, 25, 129, 118, 132, 115, 95, 13, 232, 167, 13, 59, 19, 143, 58, 59, 42, 206,
+            238, 139, 2, 251, 194, 222, 185, 59, 143, 116, 231, 175, 233, 67, 229, 11, 219, 127,
+            160, 215, 89, 217, 109, 89, 76, 225, 102, 118, 69, 94, 252, 2, 69, 205, 251, 65, 159,
+            177, 3, 101,
+        ];
+        let expected_tag = [
+            16, 244, 133, 167, 76, 40, 56, 136, 6, 235, 61, 139, 252, 7, 57, 150,
+        ];
+        assert_eq!(c, expected_c);
+        assert_eq!(tag, expected_tag);
+
+        let m2 = decrypt(&c, &tag, ad, &nonce, key).unwrap();
+        assert_eq!(m2, m);
+    }
+
+    #[test]
+    fn test_aegis_in_place() {
+        let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
+        let ad = b"Comment numero un";
+        let key = b"YELLOW SUBMARINE";
+        let nonce = [0u8; 16];
+
+        let mut mc = m.to_vec();
+        let tag = encrypt_in_place(&mut mc, ad, &nonce, key);
+        let expected_mc = [
+            137, 147, 98, 134, 30, 108, 100, 90, 185, 139, 110, 255, 169, 201, 98, 232, 138, 159,
+            166, 71, 169, 80, 96, 205, 2, 109, 22, 101, 71, 138, 231, 79, 130, 148, 159, 175, 131,
+            148, 166, 200, 180, 159, 139, 138, 80, 104, 188, 50, 89, 53, 204, 111, 12, 212, 196,
+            143, 98, 25, 129, 118, 132, 115, 95, 13, 232, 167, 13, 59, 19, 143, 58, 59, 42, 206,
+            238, 139, 2, 251, 194, 222, 185, 59, 143, 116, 231, 175, 233, 67, 229, 11, 219, 127,
+            160, 215, 89, 217, 109, 89, 76, 225, 102, 118, 69, 94, 252, 2, 69, 205, 251, 65, 159,
+            177, 3, 101,
+        ];
+        let expected_tag = [
+            16, 244, 133, 167, 76, 40, 56, 136, 6, 235, 61, 139, 252, 7, 57, 150,
+        ];
+        assert_eq!(mc, expected_mc);
+        assert_eq!(tag, expected_tag);
+
+        decrypt_in_place(&mut mc, &tag, ad, &nonce, key).unwrap();
+        assert_eq!(mc, m);
+    }
+}
