@@ -154,7 +154,7 @@ pub mod aegis128l {
             Aegis128L(State::new(key, nonce))
         }
 
-        /// Encrypts a message with AEGIS-128L
+        /// Encrypts a message using AEGIS-128L
         /// # Arguments
         /// * `m` - Message
         /// * `ad` - Associated data
@@ -198,7 +198,7 @@ pub mod aegis128l {
             (c, tag)
         }
 
-        /// Encrypts a message in-place with AEGIS-128L
+        /// Encrypts a message in-place using AEGIS-128L
         /// # Arguments
         /// * `mc` - Input and output buffer
         /// * `ad` - Associated data
@@ -240,7 +240,7 @@ pub mod aegis128l {
             state.mac(adlen, mclen)
         }
 
-        /// Decrypts a message with AEGIS-128L
+        /// Decrypts a message using AEGIS-128L
         /// # Arguments
         /// * `c` - Ciphertext
         /// * `tag` - Authentication tag
@@ -297,7 +297,7 @@ pub mod aegis128l {
             Ok(m)
         }
 
-        /// Decrypts a message in-place AEGIS-128L
+        /// Decrypts a message in-place using AEGIS-128L
         /// # Arguments
         /// * `mc` - Input and output buffer
         /// * `tag` - Authentication tag
