@@ -14,7 +14,8 @@ large nonce size, and is key committing.
 
 `std, aes_crate` is the default.
 
-In order to get decent code on x86 CPUs, you may want to set additional `rustc` flags prior to compiling that crate or a project using it:
+In order to get decent code on x86 CPUs, you may want to set additional `rustc`
+flags prior to compiling that crate or a project using it:
 
 ```sh
 export RUSTFLAGS="-Ctarget-feature=+aes,+sse4.1"
