@@ -14,4 +14,15 @@ large nonce size, and is key committing.
 
 `std, aes_crate` is the default.
 
-`aesni` is about 2.8x faster than `aes_crate`.
+In order to get decent code on x86 CPUs, you may want to set additional `rustc` flags prior to compiling that crate or a project using it:
+
+```sh
+export RUSTFLAGS="-Ctarget-feature=+aes,+sse4.1"
+```
+
+A benchmark can be run that way:
+
+```sh
+export RUSTFLAGS="-C target-cpu=native Ctarget-feature=+aes,+sse4.1"
+cargo bench --no-default-features --features=std,aesni
+```

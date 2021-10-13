@@ -16,6 +16,7 @@ aes = { version = "0.7.5", features = ["hazmat"], optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }
+aes-gcm = "0.9.4"
 
 [[bench]]
 name = "benchmark"
