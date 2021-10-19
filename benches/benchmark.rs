@@ -5,7 +5,6 @@ use aes_gcm::{
 };
 use benchmark_simple::*;
 use chacha20poly1305::ChaCha20Poly1305;
-use xoodyak::XoodyakKeyed;
 
 fn test_aes256gcm(mut m: &mut [u8]) {
     let key = aes_gcm::Key::from_slice(&[0u8; 32]);
@@ -19,12 +18,6 @@ fn test_aes128gcm(mut m: &mut [u8]) {
     let nonce = aes_gcm::Nonce::from_slice(&[0u8; 12]);
     let state = Aes128Gcm::new(key);
     state.encrypt_in_place_detached(nonce, &[], &mut m).unwrap();
-}
-
-fn test_xoodyak(mut m: &mut [u8]) {
-    let key = [0u8; 32];
-    let mut state = XoodyakKeyed::new(&key, None, None, None).unwrap();
-    state.encrypt_in_place(&mut m);
 }
 
 fn test_aegis128l(mut m: &mut [u8]) {
@@ -52,9 +45,6 @@ fn main() {
 
     let res = bench.run(None, || test_aes128gcm(&mut m));
     println!("aes128-gcm        : {}", res.throughput(m.len() as _));
-
-    let res = bench.run(None, || test_xoodyak(&mut m));
-    println!("xoodyak           : {}", res.throughput(m.len() as _));
 
     let res = bench.run(None, || test_chacha20poly1305(&mut m));
     println!("chacha20-poly1305 : {}", res.throughput(m.len() as _));

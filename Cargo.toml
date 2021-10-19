@@ -19,7 +19,6 @@ features = ["hazmat"]
 benchmark-simple = "0.1.2"
 aes-gcm = "0.9.4"
 chacha20poly1305 = "0.9.0"
-xoodyak = "0.7.3"
 
 [[bench]]
 name = "benchmark"
