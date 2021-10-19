@@ -11,8 +11,9 @@ repository = "https://github.com/jedisct1/rust-aegis"
 categories = ["no-std", "cryptography"]
 readme = "README.md"
 
-[dependencies]
-aes = { version = "0.7.5", features = ["hazmat"], optional = true }
+[target."cfg(not(any(all(target_arch = \"x86_64\", target_feature = \"aes\"),all(target_arch = \"x86\", target_feature = \"aes\"))))".dependencies.aes]
+version = "0.7.5"
+features = ["hazmat"]
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }
@@ -23,10 +24,8 @@ name = "benchmark"
 harness = false
 
 [features]
-default = ["std", "aes_crate"]
-aes_crate = ["aes"]
+default = ["std"]
 std = []
-aesni = []
 
 [profile.release]
 codegen-units = 1
