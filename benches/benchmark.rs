@@ -6,34 +6,32 @@ use aes_gcm::{
 use benchmark_simple::*;
 use chacha20poly1305::ChaCha20Poly1305;
 
-fn test_aes256gcm(mut m: &mut [u8]) {
+fn test_aes256gcm(m: &mut [u8]) {
     let key = aes_gcm::Key::from_slice(&[0u8; 32]);
     let nonce = aes_gcm::Nonce::from_slice(&[0u8; 12]);
     let state = Aes256Gcm::new(key);
-    state.encrypt_in_place_detached(nonce, &[], &mut m).unwrap();
+    state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
-fn test_aes128gcm(mut m: &mut [u8]) {
+fn test_aes128gcm(m: &mut [u8]) {
     let key = aes_gcm::Key::from_slice(&[0u8; 16]);
     let nonce = aes_gcm::Nonce::from_slice(&[0u8; 12]);
     let state = Aes128Gcm::new(key);
-    state.encrypt_in_place_detached(nonce, &[], &mut m).unwrap();
+    state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
-fn test_aegis128l(mut m: &mut [u8]) {
+fn test_aegis128l(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
     let state = Aegis128L::new(&nonce, &key);
-    state.encrypt_in_place(&mut m, &[]);
+    state.encrypt_in_place(m, &[]);
 }
 
-fn test_chacha20poly1305(mut m: &mut [u8]) {
+fn test_chacha20poly1305(m: &mut [u8]) {
     let key = chacha20poly1305::Key::from_slice(&[0u8; 32]);
     let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]);
     let state = ChaCha20Poly1305::new(key);
-    state
-        .encrypt_in_place_detached(&nonce, &[], &mut m)
-        .unwrap();
+    state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
 fn main() {
