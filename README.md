@@ -28,10 +28,40 @@ cargo bench --no-default-features
 
 # Benchmarks
 
-Macbook Pro - 2,4 GHz Intel Core i9
+## Rust
 
-| cipher            | speed   |
-| ----------------- | ------- |
-| aes256-gcm        | 1.44G/s |
-| chacha20-poly1305 | 1.51G/s |
-| aegis128l         | 4.71G/s |
+Crates:
+
+- `aes-gcm`
+- `chacha20poly1305`
+- `aegis128l`
+
+Macbook Pro - 2,4 GHz Intel Core i9, `RUSTFLAGS` set.
+
+| cipher            | speed      |
+| ----------------- | ---------- |
+| aes256-gcm        | 1.49G/s    |
+| aes128-gcm        | 1.72G/s    |
+| xoodyak           | 391.19 M/s |
+| chacha20-poly1305 | 1.53G/s    |
+| aegis128l         | 4.91G/s    |
+
+WebAssembly (Wasmtime)
+
+| cipher            | speed      |
+| ----------------- | ---------- |
+| aes256-gcm        | 36.24 M/s  |
+| aes128-gcm        | 42.93 M/s  |
+| xoodyak           | 136.09 M/s |
+| chacha20-poly1305 | 192.31 M/s |
+| aegis128l         | 49.51 M/s  |
+
+Other implementations for reference:
+
+| cipher (implementation)     | speed     |
+| --------------------------- | --------- |
+| aes256-gcm (OpenSSL)        | 4.97 G/s  |
+| aes128-gcm (OpenSSL)        | 6.89 G/s  |
+| chacha20-poly1305 (OpenSSL) | 2.67 G/s  |
+| aes128-ocb (OpenSSL)        | 7.10 G/s  |
+| aegis128l (Zig)             | 14.98 G/s |
