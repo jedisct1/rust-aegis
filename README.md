@@ -62,4 +62,4 @@ WebAssembly (Wasmtime)
 | aes128-gcm (OpenSSL)        | 6.89 G/s  |
 | chacha20-poly1305 (OpenSSL) | 2.67 G/s  |
 | aes128-ocb (OpenSSL)        | 7.10 G/s  |
-| aegis128l (Zig)             | 14.98 G/s |
+| aegis128l (Zig)             | 10.13 G/s |
