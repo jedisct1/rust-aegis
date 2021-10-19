@@ -28,7 +28,7 @@ cargo bench --no-default-features
 
 # Benchmarks
 
-## Rust
+## Rust implementations
 
 Crates:
 
@@ -38,13 +38,12 @@ Crates:
 
 Macbook Pro - 2,4 GHz Intel Core i9, `RUSTFLAGS` set.
 
-| cipher            | speed      |
-| ----------------- | ---------- |
-| aes256-gcm        | 1.49G/s    |
-| aes128-gcm        | 1.72G/s    |
-| xoodyak           | 391.19 M/s |
-| chacha20-poly1305 | 1.53G/s    |
-| aegis128l         | 4.91G/s    |
+| cipher            | speed   |
+| ----------------- | ------- |
+| aes256-gcm        | 1.49G/s |
+| aes128-gcm        | 1.72G/s |
+| chacha20-poly1305 | 1.53G/s |
+| aegis128l         | 4.91G/s |
 
 WebAssembly (Wasmtime)
 
@@ -52,11 +51,10 @@ WebAssembly (Wasmtime)
 | ----------------- | ---------- |
 | aes256-gcm        | 36.24 M/s  |
 | aes128-gcm        | 42.93 M/s  |
-| xoodyak           | 136.09 M/s |
 | chacha20-poly1305 | 192.31 M/s |
 | aegis128l         | 49.51 M/s  |
 
-Other implementations for reference:
+## Other implementations
 
 | cipher (implementation)     | speed     |
 | --------------------------- | --------- |
