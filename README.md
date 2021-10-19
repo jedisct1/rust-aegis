@@ -25,3 +25,13 @@ A benchmark can be run that way:
 export RUSTFLAGS="-C target-cpu=native -Ctarget-feature=+aes,+sse4.1"
 cargo bench --no-default-features
 ```
+
+# Benchmarks
+
+Macbook Pro - 2,4 GHz Intel Core i9
+
+| cipher            | speed   |
+| ----------------- | ------- |
+| aes256-gcm        | 1.44G/s |
+| chacha20-poly1305 | 1.51G/s |
+| aegis128l         | 4.71G/s |

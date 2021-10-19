@@ -1,42 +1,44 @@
 use aegis::aegis128l::Aegis128L;
-use aes_gcm::aead::Aead;
-use aes_gcm::{Aes128Gcm, NewAead};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use aes_gcm::{
+    aead::{AeadInPlace as _, NewAead as _},
+    Aes256Gcm,
+};
+use benchmark_simple::*;
+use chacha20poly1305::ChaCha20Poly1305;
 
-fn test_encrypt(m: &[u8]) {
-    let ad = b"";
-    let key = b"YELLOW SUBMARINE";
-    let nonce = [0u8; 16];
-
-    let (c, tag) = Aegis128L::new(&nonce, key).encrypt(m, ad);
-    black_box(c);
-    black_box(tag);
-}
-
-fn test_encrypt_in_place(mc: &mut [u8]) {
-    let ad = b"";
-    let key = b"YELLOW SUBMARINE";
-    let nonce = [0u8; 16];
-    let tag = Aegis128L::new(&nonce, key).encrypt_in_place(mc, ad);
-    black_box(tag);
-}
-
-fn test_aesgcm(m: &[u8]) {
-    let key = aes_gcm::Key::from_slice(b"YELLOW SUBMARINE");
+fn test_aes256gcm(mut m: &mut [u8]) {
+    let key = aes_gcm::Key::from_slice(&[0u8; 32]);
     let nonce = aes_gcm::Nonce::from_slice(&[0u8; 12]);
-    let state = Aes128Gcm::new(key);
-    let c = state.encrypt(nonce, m).unwrap();
-    black_box(c);
+    let state = Aes256Gcm::new(key);
+    state.encrypt_in_place_detached(nonce, &[], &mut m).unwrap();
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    let mut m = vec![0u8; 1024 * 1024];
-    c.bench_function("aegis128l", |b| b.iter(|| test_encrypt(black_box(&m))));
-    c.bench_function("aegis128l (in place)", |b| {
-        b.iter(|| test_encrypt_in_place(black_box(&mut m)))
-    });
-    c.bench_function("aes128-gcm", |b| b.iter(|| test_aesgcm(black_box(&m))));
+fn test_aegis128l(mut m: &mut [u8]) {
+    let key = [0u8; 16];
+    let nonce = [0u8; 16];
+    let state = Aegis128L::new(&nonce, &key);
+    state.encrypt_in_place(&mut m, &[]);
 }
 
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+fn test_chacha20poly1305(mut m: &mut [u8]) {
+    let key = chacha20poly1305::Key::from_slice(&[0u8; 32]);
+    let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]);
+    let state = ChaCha20Poly1305::new(key);
+    state
+        .encrypt_in_place_detached(&nonce, &[], &mut m)
+        .unwrap();
+}
+
+fn main() {
+    let bench = Bench::new();
+    let mut m = vec![0xd0u8; 1024 * 1024 * 1024];
+
+    let res = bench.run(None, || test_aes256gcm(&mut m));
+    println!("aes256-gcm       : {}", res.throughput(m.len() as _));
+
+    let res = bench.run(None, || test_chacha20poly1305(&mut m));
+    println!("chacha20-poly1305: {}", res.throughput(m.len() as _));
+
+    let res = bench.run(None, || test_aegis128l(&mut m));
+    println!("aegis128l        : {}", res.throughput(m.len() as _));
+}
