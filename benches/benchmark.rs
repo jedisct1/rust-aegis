@@ -36,17 +36,23 @@ fn test_chacha20poly1305(m: &mut [u8]) {
 
 fn main() {
     let bench = Bench::new();
-    let mut m = vec![0xd0u8; 1024 * 1024 * 1024];
+    let mut m = vec![0xd0u8; 16384];
 
-    let res = bench.run(None, || test_aes256gcm(&mut m));
+    let options = &Options {
+        iterations: 100_000,
+        max_samples: 10,
+        ..Default::default()
+    };
+
+    let res = bench.run(options, || test_aes256gcm(&mut m));
     println!("aes256-gcm        : {}", res.throughput(m.len() as _));
 
-    let res = bench.run(None, || test_aes128gcm(&mut m));
+    let res = bench.run(options, || test_aes128gcm(&mut m));
     println!("aes128-gcm        : {}", res.throughput(m.len() as _));
 
-    let res = bench.run(None, || test_chacha20poly1305(&mut m));
+    let res = bench.run(options, || test_chacha20poly1305(&mut m));
     println!("chacha20-poly1305 : {}", res.throughput(m.len() as _));
 
-    let res = bench.run(None, || test_aegis128l(&mut m));
+    let res = bench.run(options, || test_aegis128l(&mut m));
     println!("aegis128l         : {}", res.throughput(m.len() as _));
 }
