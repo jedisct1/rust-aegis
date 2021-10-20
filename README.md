@@ -28,7 +28,7 @@ cargo bench
 
 # Benchmarks
 
-Benchmarks on 16384 bytes input blocks. Results are in bytes per second.
+Benchmarks take a 16384 bytes input block. Results are in bytes per second.
 
 ## Rust implementations
 
