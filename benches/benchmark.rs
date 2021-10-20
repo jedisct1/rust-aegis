@@ -40,7 +40,10 @@ fn main() {
 
     let options = &Options {
         iterations: 100_000,
+        warmup_iterations: 1_000,
+        min_samples: 5,
         max_samples: 10,
+        max_rsd: 1.0,
         ..Default::default()
     };
 
