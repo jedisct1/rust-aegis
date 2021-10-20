@@ -23,7 +23,7 @@ A benchmark can be run that way:
 
 ```sh
 export RUSTFLAGS="-C target-cpu=native -Ctarget-feature=+aes,+pclmul,+sse4.1"
-cargo bench --no-default-features
+cargo bench
 ```
 
 # Benchmarks
