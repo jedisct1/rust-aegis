@@ -104,33 +104,45 @@ pub mod aegis128l {
 
         fn enc(&mut self, dst: &mut [u8; 32], src: &[u8; 32]) {
             let blocks = &self.blocks;
+            let z0 = blocks[6].xor(blocks[1]).xor(blocks[2].and(blocks[3]));
+            let z1 = blocks[2].xor(blocks[5]).xor(blocks[6].and(blocks[7]));
             let msg0 = AesBlock::from_bytes(&src[..16]);
             let msg1 = AesBlock::from_bytes(&src[16..32]);
-            let tmp0 = msg0
-                .xor(blocks[6])
-                .xor(blocks[1])
-                .xor(blocks[2].and(blocks[3]));
-            let tmp1 = msg1
-                .xor(blocks[2])
-                .xor(blocks[5])
-                .xor(blocks[6].and(blocks[7]));
-            dst[..16].copy_from_slice(&tmp0.as_bytes());
-            dst[16..32].copy_from_slice(&tmp1.as_bytes());
+            let c0 = msg0.xor(z0);
+            let c1 = msg1.xor(z1);
+            dst[..16].copy_from_slice(&c0.as_bytes());
+            dst[16..32].copy_from_slice(&c1.as_bytes());
             self.update(msg0, msg1);
         }
 
         fn dec(&mut self, dst: &mut [u8; 32], src: &[u8; 32]) {
             let blocks = &self.blocks;
-            let msg0 = AesBlock::from_bytes(&src[0..16])
-                .xor(blocks[6])
-                .xor(blocks[1])
-                .xor(blocks[2].and(blocks[3]));
-            let msg1 = AesBlock::from_bytes(&src[16..32])
-                .xor(blocks[2])
-                .xor(blocks[5])
-                .xor(blocks[6].and(blocks[7]));
+            let z0 = blocks[6].xor(blocks[1]).xor(blocks[2].and(blocks[3]));
+            let z1 = blocks[2].xor(blocks[5]).xor(blocks[6].and(blocks[7]));
+            let msg0 = AesBlock::from_bytes(&src[0..16]).xor(z0);
+            let msg1 = AesBlock::from_bytes(&src[16..32]).xor(z1);
             dst[..16].copy_from_slice(&msg0.as_bytes());
             dst[16..32].copy_from_slice(&msg1.as_bytes());
+            self.update(msg0, msg1);
+        }
+
+        fn dec_last(&mut self, dst: &mut [u8; 32], src: &[u8]) {
+            let len = src.len();
+            let mut src_padded = [0u8; 32];
+            src_padded[..len].copy_from_slice(src);
+
+            let blocks = &self.blocks;
+            let z0 = blocks[6].xor(blocks[1]).xor(blocks[2].and(blocks[3]));
+            let z1 = blocks[2].xor(blocks[5]).xor(blocks[6].and(blocks[7]));
+            let msg_padded0 = AesBlock::from_bytes(&src_padded[0..16]).xor(z0);
+            let msg_padded1 = AesBlock::from_bytes(&src_padded[16..32]).xor(z1);
+
+            dst[..16].copy_from_slice(&msg_padded0.as_bytes());
+            dst[16..32].copy_from_slice(&msg_padded1.as_bytes());
+            dst[len..].fill(0);
+
+            let msg0 = AesBlock::from_bytes(&dst[0..16]);
+            let msg1 = AesBlock::from_bytes(&dst[16..32]);
             self.update(msg0, msg1);
         }
 
@@ -284,14 +296,8 @@ pub mod aegis128l {
                 i += 32;
             }
             if clen % 32 != 0 {
-                src.fill(0);
-                src[..clen % 32].copy_from_slice(&c[i..]);
-                state.dec(&mut dst, &src);
-                m.extend_from_slice(&dst[..clen % 32]);
-                dst[..clen % 32].fill(0);
-                let blocks = &mut state.blocks;
-                blocks[0] = blocks[0].xor(AesBlock::from_bytes(&dst[..16]));
-                blocks[4] = blocks[4].xor(AesBlock::from_bytes(&dst[16..32]));
+                state.dec_last(&mut dst, &c[i..]);
+                m.extend_from_slice(&dst[0..clen % 32]);
             }
             let tag2 = state.mac(adlen, clen);
             let mut acc = 0;
@@ -340,14 +346,8 @@ pub mod aegis128l {
                 i += 32;
             }
             if mclen % 32 != 0 {
-                src.fill(0);
-                src[..mclen % 32].copy_from_slice(&mc[i..]);
-                state.dec(&mut dst, &src);
-                mc[i..].copy_from_slice(&dst[..mclen % 32]);
-                dst[..mclen % 32].fill(0);
-                let blocks = &mut state.blocks;
-                blocks[0] = blocks[0].xor(AesBlock::from_bytes(&dst[..16]));
-                blocks[4] = blocks[4].xor(AesBlock::from_bytes(&dst[16..32]));
+                state.dec_last(&mut dst, &mc[i..]);
+                mc[i..].copy_from_slice(&dst[0..mclen % 32]);
             }
             let tag2 = state.mac(adlen, mclen);
             let mut acc = 0;
