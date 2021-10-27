@@ -126,7 +126,7 @@ pub mod aegis128l {
             self.update(msg0, msg1);
         }
 
-        fn dec_last(&mut self, dst: &mut [u8; 32], src: &[u8]) {
+        fn dec_partial(&mut self, dst: &mut [u8; 32], src: &[u8]) {
             let len = src.len();
             let mut src_padded = [0u8; 32];
             src_padded[..len].copy_from_slice(src);
@@ -296,7 +296,7 @@ pub mod aegis128l {
                 i += 32;
             }
             if clen % 32 != 0 {
-                state.dec_last(&mut dst, &c[i..]);
+                state.dec_partial(&mut dst, &c[i..]);
                 m.extend_from_slice(&dst[0..clen % 32]);
             }
             let tag2 = state.mac(adlen, clen);
@@ -346,7 +346,7 @@ pub mod aegis128l {
                 i += 32;
             }
             if mclen % 32 != 0 {
-                state.dec_last(&mut dst, &mc[i..]);
+                state.dec_partial(&mut dst, &mc[i..]);
                 mc[i..].copy_from_slice(&dst[0..mclen % 32]);
             }
             let tag2 = state.mac(adlen, mclen);
