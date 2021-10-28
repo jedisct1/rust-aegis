@@ -74,7 +74,7 @@ pub mod aegis128l {
             blocks[4] = blocks[4].xor(d2);
         }
 
-        pub fn new(key: &[u8; 16], nonce: &[u8; 16]) -> Self {
+        pub fn new(key: &Key, nonce: &Nonce) -> Self {
             let c1 = AesBlock::from_bytes(&[
                 0xdb, 0x3d, 0x18, 0x55, 0x6d, 0xc2, 0x2f, 0xf1, 0x20, 0x11, 0x31, 0x42, 0x73, 0xb5,
                 0x28, 0xdd,
