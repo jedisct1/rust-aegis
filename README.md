@@ -1,7 +1,7 @@
 # AEGIS for Rust
 
 This is a Rust implementation of the
-[AEGIS](https://jedisct1.github.io/draft-aegis-aead/draft-denis-aegis-aead.html)
+[AEGIS](https://datatracker.ietf.org/doc/draft-denis-aegis-aead/)
 authenticated cipher, ported from the Zig standard library.
 
 AEGIS is extremely fast on CPUs with AES acceleration, has a large nonce size,
