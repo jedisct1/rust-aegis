@@ -16,13 +16,13 @@ use aes_crate::AesBlock;
     all(target_arch = "x86", target_feature = "aes")
 )))]
 mod aes_ni;
+use core::fmt;
+
 #[cfg(all(any(
     all(target_arch = "x86_64", target_feature = "aes"),
     all(target_arch = "x86", target_feature = "aes")
 )))]
 use aes_ni::AesBlock;
-
-use core::fmt;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Error {
