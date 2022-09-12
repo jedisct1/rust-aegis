@@ -1,20 +1,20 @@
 use aegis::aegis128l::Aegis128L;
 use aes_gcm::{
-    aead::{AeadInPlace as _, NewAead as _},
+    aead::{AeadInPlace as _, KeyInit as _},
     Aes128Gcm, Aes256Gcm,
 };
 use benchmark_simple::*;
 use chacha20poly1305::ChaCha20Poly1305;
 
 fn test_aes256gcm(m: &mut [u8]) {
-    let key = aes_gcm::Key::from_slice(&[0u8; 32]);
+    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&[0u8; 32]);
     let nonce = aes_gcm::Nonce::from_slice(&[0u8; 12]);
     let state = Aes256Gcm::new(key);
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
 fn test_aes128gcm(m: &mut [u8]) {
-    let key = aes_gcm::Key::from_slice(&[0u8; 16]);
+    let key = aes_gcm::Key::<Aes128Gcm>::from_slice(&[0u8; 16]);
     let nonce = aes_gcm::Nonce::from_slice(&[0u8; 12]);
     let state = Aes128Gcm::new(key);
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
