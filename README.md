@@ -18,7 +18,7 @@ and is key committing.
 A benchmark can be run that way:
 
 ```sh
-export RUSTFLAGS="-C target-cpu=native -Ctarget-feature=+aes,+pclmulqdq,+sse4.1"
+export RUSTFLAGS="-C target-cpu=native"
 cargo bench
 ```
 
@@ -36,34 +36,45 @@ Crates:
 - `chacha20poly1305`
 - `aegis128l`
 
-Macbook Pro - Apple M1
+`rustc` version `1.65.0`, `wasmtime` version `4.0.0`.
 
-| cipher            | speed    |
-| ----------------- | -------- |
-| aes256-gcm        | 139.66 M/s |
-| aes128-gcm        | 173.09 M/s|
-| chacha20-poly1305 | 265.48 M/s |
-| aegis128l         | 13.88 G/s |
-
-Zen 2, RUSTFLAGS set.
+## Zen2
 
 | cipher            | speed      |
 | ----------------- | ---------- |
 | aes256-gcm        | 934.41 M/s |
 | aes128-gcm        | 973.18 M/s |
 | chacha20-poly1305 | 1.35 G/s   |
-| aegis128l         | 4.94 G/s   |
+| aegis128l         | 13.70 G/s  |
 
-WebAssembly (Wasmtime)
+## Macbook Pro - Apple M1
 
 | cipher            | speed      |
 | ----------------- | ---------- |
-| aes256-gcm        | 36.88 M/s  |
-| aes128-gcm        | 44.13 M/s  |
-| chacha20-poly1305 | 193.05 M/s |
-| aegis128l         | 48.98 M/s  |
+| aes256-gcm        | 139.66 M/s |
+| aes128-gcm        | 173.09 M/s |
+| chacha20-poly1305 | 265.48 M/s |
+| aegis128l         | 13.88 G/s  |
 
-## Other implementations
+## WebAssembly (Wasmtime, Zen2)
+
+| cipher            | speed     |
+| ----------------- | --------- |
+| aes256-gcm        | 26.07 M/s |
+| aes128-gcm        | 30.10 M/s |
+| chacha20-poly1305 | 43.40 M/s |
+| aegis128l         | 33.68 M/s |
+
+## WebAssembly (Wasmtime, Apple M1)
+
+| cipher            | speed    |
+| ----------------- | -------- |
+| aes256-gcm        | 2.75 M/s |
+| aes128-gcm        | 3.33 M/s |
+| chacha20-poly1305 | 4.10 M/s |
+| aegis128l         | 3.64 M/s |
+
+## Other implementations, Zen2
 
 | cipher (implementation)     | speed     |
 | --------------------------- | --------- |
