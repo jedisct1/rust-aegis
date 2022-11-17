@@ -48,6 +48,15 @@ Macbook Pro - 2,4 GHz Intel Core i9, `RUSTFLAGS` set.
 | chacha20-poly1305 | 1.48 G/s |
 | aegis128l         | 6.21 G/s |
 
+Zen 2, RUSTFLAGS set.
+
+| cipher            | speed      |
+| ----------------- | ---------- |
+| aes256-gcm        | 934.41 M/s |
+| aes128-gcm        | 973.18 M/s |
+| chacha20-poly1305 | 1.35 G/s   |
+| aegis128l         | 4.94 G/s   |
+
 WebAssembly (Wasmtime)
 
 | cipher            | speed      |
