@@ -12,8 +12,11 @@ categories = ["no-std", "cryptography"]
 readme = "README.md"
 
 [target."cfg(not(any(all(target_arch = \"x86_64\", target_feature = \"aes\"),all(target_arch = \"x86\", target_feature = \"aes\"))))".dependencies.aes]
-version = "0.8.0"
+version = "0.8.2"
 features = ["hazmat"]
+
+[target.'cfg(not(pure_rust))'.build-dependencies]
+cc = "1.0.76"
 
 [dev-dependencies]
 benchmark-simple = "0.1.7"
@@ -26,6 +29,7 @@ harness = false
 
 [features]
 default = ["std"]
+pure-rust = []
 std = []
 
 [profile.release]

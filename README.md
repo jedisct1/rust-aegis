@@ -13,12 +13,7 @@ and is key committing.
 
 `std` is the default.
 
-**IMPORTANT:** In order to get decent code on x86 and x86_64 CPUs, you should set
-additional `rustc` flags prior to compiling that crate or a project using it:
-
-```sh
-export RUSTFLAGS="-Ctarget-feature=+aes,+sse4.1"
-```
+- `pure-rust`: don't use the `cc` crate to take advantage of the optimized implementation ported from libsodium. Setting this flag will substantially degrade performance.
 
 A benchmark can be run that way:
 
@@ -26,6 +21,8 @@ A benchmark can be run that way:
 export RUSTFLAGS="-C target-cpu=native -Ctarget-feature=+aes,+pclmulqdq,+sse4.1"
 cargo bench
 ```
+
+For benchmarking, `RUSTFLAGS` is set so that the AES-GCM implementations can take advantage of hardware acceleration.
 
 # Benchmarks
 
@@ -39,14 +36,14 @@ Crates:
 - `chacha20poly1305`
 - `aegis128l`
 
-Macbook Pro - 2,4 GHz Intel Core i9, `RUSTFLAGS` set.
+Macbook Pro - Apple M1
 
 | cipher            | speed    |
 | ----------------- | -------- |
-| aes256-gcm        | 1.59 G/s |
-| aes128-gcm        | 1.91 G/s |
-| chacha20-poly1305 | 1.48 G/s |
-| aegis128l         | 6.21 G/s |
+| aes256-gcm        | 139.66 M/s |
+| aes128-gcm        | 173.09 M/s|
+| chacha20-poly1305 | 265.48 M/s |
+| aegis128l         | 13.88 G/s |
 
 Zen 2, RUSTFLAGS set.
 
