@@ -13,7 +13,7 @@ and is key committing.
 
 `std` is the default.
 
-- `pure-rust`: don't use the `cc` crate to take advantage of the optimized implementation ported from libsodium. Setting this flag will substantially degrade performance.
+- `pure-rust`: don't use the `cc` crate to take advantage of the optimized implementation ported from libsodium. Setting this flag will substantially degrade performance. Only required if you need to support old x86_64 or ARM CPUs without AES acceleration.
 
 A benchmark can be run that way:
 
