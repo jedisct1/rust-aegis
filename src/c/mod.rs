@@ -46,8 +46,8 @@ pub mod aegis128l {
     impl Aegis128L {
         pub fn new(key: &Key, nonce: &Nonce) -> Self {
             Aegis128L {
-                key: key.clone(),
-                nonce: nonce.clone(),
+                key: *key,
+                nonce: *nonce,
             }
         }
 
