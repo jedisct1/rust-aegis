@@ -7,8 +7,8 @@ fn main() {
     }
     let arch = env::var("CARGO_CFG_TARGET_ARCH").expect("No target arch");
     match &*arch {
-        "x86_64" | "aarch64" => {},
-        _ => return
+        "x86_64" | "aarch64" => {}
+        _ => return,
     }
     cc::Build::new()
         .opt_level(3)

@@ -1,4 +1,3 @@
-
 #[cfg(not(any(
     all(target_arch = "x86_64", target_feature = "aes"),
     all(target_arch = "x86", target_feature = "aes")
@@ -344,4 +343,3 @@ pub mod aegis128l {
         }
     }
 }
-
