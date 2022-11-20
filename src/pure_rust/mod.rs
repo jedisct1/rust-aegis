@@ -83,6 +83,13 @@ pub mod aegis128l {
             state
         }
 
+        #[inline(always)]
+        fn absorb(&mut self, src: &[u8; 32]) {
+            let msg0 = AesBlock::from_bytes(&src[..16]);
+            let msg1 = AesBlock::from_bytes(&src[16..32]);
+            self.update(msg0, msg1);
+        }
+
         fn enc(&mut self, dst: &mut [u8; 32], src: &[u8; 32]) {
             let blocks = &self.blocks;
             let z0 = blocks[6].xor(blocks[1]).xor(blocks[2].and(blocks[3]));
@@ -178,13 +185,13 @@ pub mod aegis128l {
             let mut i = 0;
             while i + 32 <= adlen {
                 src.copy_from_slice(&ad[i..][..32]);
-                state.enc(&mut dst, &src);
+                state.absorb(&src);
                 i += 32;
             }
             if adlen % 32 != 0 {
                 src.fill(0);
                 src[..adlen % 32].copy_from_slice(&ad[i..]);
-                state.enc(&mut dst, &src);
+                state.absorb(&src);
             }
             i = 0;
             while i + 32 <= mlen {
@@ -218,13 +225,13 @@ pub mod aegis128l {
             let mut i = 0;
             while i + 32 <= adlen {
                 src.copy_from_slice(&ad[i..][..32]);
-                state.enc(&mut dst, &src);
+                state.absorb(&src);
                 i += 32;
             }
             if adlen % 32 != 0 {
                 src.fill(0);
                 src[..adlen % 32].copy_from_slice(&ad[i..]);
-                state.enc(&mut dst, &src);
+                state.absorb(&src);
             }
             i = 0;
             while i + 32 <= mclen {
