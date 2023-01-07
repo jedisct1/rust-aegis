@@ -16,7 +16,7 @@ version = "0.8.2"
 features = ["hazmat"]
 
 [target.'cfg(not(pure_rust))'.build-dependencies]
-cc = "1.0.76"
+cc = "1.0.78"
 
 [dev-dependencies]
 benchmark-simple = "0.1.7"
