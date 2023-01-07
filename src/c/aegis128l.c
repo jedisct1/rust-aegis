@@ -213,13 +213,13 @@ crypto_aead_aegis128l_decrypt_detached(unsigned char *m, const unsigned char *c,
                                        size_t adlen, const unsigned char *npub,
                                        const unsigned char *k)
 {
-    aes_block_t state[8];
+    aes_block_t                    state[8];
     CRYPTO_ALIGN(16) unsigned char src[32];
     CRYPTO_ALIGN(16) unsigned char dst[32];
     CRYPTO_ALIGN(16) unsigned char computed_mac[16];
-    size_t        i;
-    size_t        mlen;
-    unsigned char d;
+    size_t                         i;
+    size_t                         mlen;
+    unsigned char                  d;
 
     mlen = clen;
     aegis128l_init(k, npub, state);
