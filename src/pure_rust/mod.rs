@@ -164,7 +164,7 @@ pub mod aegis128l {
     impl Aegis128L {
         /// Create a new AEAD instance.
         /// `key` and `nonce` must be 16 bytes long.
-        pub fn new(nonce: &Nonce, key: &Key) -> Self {
+        pub fn new(key: &Key, nonce: &Nonce) -> Self {
             Aegis128L(State::new(key, nonce))
         }
 
