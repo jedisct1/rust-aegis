@@ -16,10 +16,11 @@ version = "0.8.2"
 features = ["hazmat"]
 
 [target.'cfg(not(pure_rust))'.build-dependencies]
-cc = "1.0.78"
+cc = "1.0.79"
 
 [dev-dependencies]
 benchmark-simple = "0.1.7"
+ascon-aead = "0.4.0"
 aes-gcm = "0.10.1"
 chacha20poly1305 = "0.10.1"
 
