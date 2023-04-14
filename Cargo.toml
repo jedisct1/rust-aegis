@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2018"
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "AEGIS authenticated cipher (AEGIS128L)"
@@ -20,7 +20,7 @@ cc = "1.0.79"
 
 [dev-dependencies]
 benchmark-simple = "0.1.7"
-ascon-aead = "0.4.0"
+ascon-aead = "0.4.2"
 aes-gcm = "0.10.1"
 chacha20poly1305 = "0.10.1"
 
