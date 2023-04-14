@@ -27,7 +27,7 @@ pub mod aegis128l {
     pub use crate::Error;
 
     /// AEGIS-128L authentication tag
-    pub type Tag = [u8; 16];
+    pub type Tag = Vec<u8>;
 
     /// AEGIS-128L key
     pub type Key = [u8; 16];
@@ -134,7 +134,7 @@ pub mod aegis128l {
             self.update(msg0, msg1);
         }
 
-        fn mac(&mut self, adlen: usize, mlen: usize) -> Tag {
+        fn mac(&mut self, tag_bits: u16, adlen: usize, mlen: usize) -> Tag {
             let tmp = {
                 let blocks = &self.blocks;
                 let mut sizes = [0u8; 16];
@@ -147,24 +147,51 @@ pub mod aegis128l {
                 self.update(tmp, tmp2);
             }
             let blocks = &self.blocks;
-            let mac = blocks[0]
-                .xor(blocks[1])
-                .xor(blocks[2])
-                .xor(blocks[3])
-                .xor(blocks[4])
-                .xor(blocks[5])
-                .xor(blocks[6]);
-            mac.as_bytes()
+            let mut tag = vec![0u8; (tag_bits / 8) as _];
+            match tag_bits {
+                128 => tag.copy_from_slice(
+                    &blocks[0]
+                        .xor(blocks[1])
+                        .xor(blocks[2])
+                        .xor(blocks[3])
+                        .xor(blocks[4])
+                        .xor(blocks[5])
+                        .xor(blocks[6])
+                        .as_bytes(),
+                ),
+                256 => {
+                    tag[..16].copy_from_slice(
+                        &blocks[0]
+                            .xor(blocks[1])
+                            .xor(blocks[2])
+                            .xor(blocks[3])
+                            .as_bytes(),
+                    );
+                    tag[16..].copy_from_slice(
+                        &blocks[4]
+                            .xor(blocks[5])
+                            .xor(blocks[6])
+                            .xor(blocks[7])
+                            .as_bytes(),
+                    );
+                }
+                _ => unreachable!(),
+            }
+            tag
         }
     }
 
     #[repr(transparent)]
-    pub struct Aegis128L(State);
+    pub struct Aegis128L<const TAG_BITS: u16>(State);
 
-    impl Aegis128L {
+    impl<const TAG_BITS: u16> Aegis128L<TAG_BITS> {
         /// Create a new AEAD instance.
         /// `key` and `nonce` must be 16 bytes long.
         pub fn new(key: &Key, nonce: &Nonce) -> Self {
+            assert!(
+                TAG_BITS == 128 || TAG_BITS == 256,
+                "Invalid tag length, must be 128 or 256"
+            );
             Aegis128L(State::new(key, nonce))
         }
 
@@ -206,7 +233,7 @@ pub mod aegis128l {
                 state.enc(&mut dst, &src);
                 c.extend_from_slice(&dst[..mlen % 32]);
             }
-            let tag = state.mac(adlen, mlen);
+            let tag = state.mac(TAG_BITS, adlen, mlen);
             (c, tag)
         }
 
@@ -247,7 +274,7 @@ pub mod aegis128l {
                 mc[i..].copy_from_slice(&dst[..mclen % 32]);
             }
 
-            state.mac(adlen, mclen)
+            state.mac(TAG_BITS, adlen, mclen)
         }
 
         /// Decrypts a message using AEGIS-128L
@@ -287,7 +314,7 @@ pub mod aegis128l {
                 state.dec_partial(&mut dst, &c[i..]);
                 m.extend_from_slice(&dst[0..clen % 32]);
             }
-            let tag2 = state.mac(adlen, clen);
+            let tag2 = state.mac(TAG_BITS, adlen, clen);
             let mut acc = 0;
             for (a, b) in tag.iter().zip(tag2.iter()) {
                 acc |= a ^ b;
@@ -337,7 +364,7 @@ pub mod aegis128l {
                 state.dec_partial(&mut dst, &mc[i..]);
                 mc[i..].copy_from_slice(&dst[0..mclen % 32]);
             }
-            let tag2 = state.mac(adlen, mclen);
+            let tag2 = state.mac(TAG_BITS, adlen, mclen);
             let mut acc = 0;
             for (a, b) in tag.iter().zip(tag2.iter()) {
                 acc |= a ^ b;

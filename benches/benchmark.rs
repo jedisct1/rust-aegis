@@ -39,7 +39,7 @@ fn test_ascon128a(m: &mut [u8]) {
 fn test_aegis128l(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
-    let state = Aegis128L::new(&nonce, &key);
+    let state = Aegis128L::<128>::new(&nonce, &key);
     state.encrypt_in_place(m, &[]);
 }
 

@@ -95,8 +95,8 @@ aegis128l_init(const unsigned char *key, const unsigned char *nonce, aes_block_t
 }
 
 static void
-aegis128l_mac(unsigned char *mac, unsigned long long adlen, unsigned long long mlen,
-              aes_block_t *const state)
+aegis128l_mac(const uint16_t tag_bits, unsigned char *mac, unsigned long long adlen,
+              unsigned long long mlen, aes_block_t *const state)
 {
     aes_block_t tmp;
     int         i;
@@ -107,12 +107,19 @@ aegis128l_mac(unsigned char *mac, unsigned long long adlen, unsigned long long m
     for (i = 0; i < 7; i++) {
         aegis128l_update(state, tmp, tmp);
     }
-
-    tmp = AES_BLOCK_XOR(state[6], AES_BLOCK_XOR(state[5], state[4]));
-    tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[3], state[2]));
-    tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[1], state[0]));
-
-    AES_BLOCK_STORE(mac, tmp);
+    if (tag_bits == 128) {
+        tmp = AES_BLOCK_XOR(state[6], AES_BLOCK_XOR(state[5], state[4]));
+        tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[3], state[2]));
+        tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[1], state[0]));
+        AES_BLOCK_STORE(mac, tmp);
+    } else {
+        tmp = AES_BLOCK_XOR(state[0], state[1]);
+        tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[2], state[3]));
+        AES_BLOCK_STORE(mac, tmp);
+        tmp = AES_BLOCK_XOR(state[4], state[5]);
+        tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[6], state[7]));
+        AES_BLOCK_STORE(mac + 16, tmp);
+    }
 }
 
 static inline void
@@ -165,8 +172,9 @@ aegis128l_dec(unsigned char *const dst, const unsigned char *const src, aes_bloc
 }
 
 int
-crypto_aead_aegis128l_encrypt_detached(unsigned char *c, unsigned char *mac, const unsigned char *m,
-                                       size_t mlen, const unsigned char *ad, size_t adlen,
+crypto_aead_aegis128l_encrypt_detached(const uint16_t tag_bits, unsigned char *c,
+                                       unsigned char *mac, const unsigned char *m, size_t mlen,
+                                       const unsigned char *ad, size_t adlen,
                                        const unsigned char *npub, const unsigned char *k)
 {
     aes_block_t                    state[8];
@@ -194,21 +202,23 @@ crypto_aead_aegis128l_encrypt_detached(unsigned char *c, unsigned char *mac, con
         memcpy(c + i, dst, mlen & 0x1f);
     }
 
-    aegis128l_mac(mac, adlen, mlen, state);
+    aegis128l_mac(tag_bits, mac, adlen, mlen, state);
 
     return 0;
 }
 
 int
-crypto_aead_aegis128l_encrypt(unsigned char *c, const unsigned char *m, size_t mlen,
-                              const unsigned char *ad, size_t adlen, const unsigned char *npub,
-                              const unsigned char *k)
+crypto_aead_aegis128l_encrypt(const uint16_t tag_bits, unsigned char *c, const unsigned char *m,
+                              size_t mlen, const unsigned char *ad, size_t adlen,
+                              const unsigned char *npub, const unsigned char *k)
 {
-    return crypto_aead_aegis128l_encrypt_detached(c, c + mlen, m, mlen, ad, adlen, npub, k);
+    return crypto_aead_aegis128l_encrypt_detached(tag_bits, c, c + mlen, m, mlen, ad, adlen, npub,
+                                                  k);
 }
 
 int
-crypto_aead_aegis128l_decrypt_detached(unsigned char *m, const unsigned char *c, size_t clen,
+crypto_aead_aegis128l_decrypt_detached(const uint16_t tag_bits, unsigned char *m,
+                                       const unsigned char *c, size_t clen,
                                        const unsigned char *mac, const unsigned char *ad,
                                        size_t adlen, const unsigned char *npub,
                                        const unsigned char *k)
@@ -253,7 +263,7 @@ crypto_aead_aegis128l_decrypt_detached(unsigned char *m, const unsigned char *c,
         state[4] = AES_BLOCK_XOR(state[4], AES_BLOCK_LOAD(dst + 16));
     }
 
-    aegis128l_mac(computed_mac, adlen, mlen, state);
+    aegis128l_mac(tag_bits, computed_mac, adlen, mlen, state);
     d = 0;
     for (i = 0; i < 16; i++) {
         d |= computed_mac[i] ^ mac[i];
@@ -266,15 +276,15 @@ crypto_aead_aegis128l_decrypt_detached(unsigned char *m, const unsigned char *c,
 }
 
 int
-crypto_aead_aegis128l_decrypt(unsigned char *m, const unsigned char *c, size_t clen,
-                              const unsigned char *ad, size_t adlen, const unsigned char *npub,
-                              const unsigned char *k)
+crypto_aead_aegis128l_decrypt(const uint16_t tag_bits, unsigned char *m, const unsigned char *c,
+                              size_t clen, const unsigned char *ad, size_t adlen,
+                              const unsigned char *npub, const unsigned char *k)
 {
     int ret = -1;
 
     if (clen >= 16ULL) {
-        ret = crypto_aead_aegis128l_decrypt_detached(m, c, clen - 16ULL, c + clen - 16ULL, ad,
-                                                     adlen, npub, k);
+        ret = crypto_aead_aegis128l_decrypt_detached(tag_bits, m, c, clen - 16ULL, c + clen - 16ULL,
+                                                     ad, adlen, npub, k);
     }
     return ret;
 }
