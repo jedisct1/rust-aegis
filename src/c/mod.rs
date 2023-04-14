@@ -43,6 +43,9 @@ pub mod aegis128l {
         nonce: Nonce,
     }
 
+    /// AEGIS-128L authentication tag
+    pub type Tag<const TAG_BYTES: usize> = [u8; TAG_BYTES];
+
     impl<const TAG_BYTES: usize> Aegis128L<TAG_BYTES> {
         pub fn new(key: &Key, nonce: &Nonce) -> Self {
             assert!(
@@ -62,7 +65,7 @@ pub mod aegis128l {
         /// # Returns
         /// Encrypted message and authentication tag.
         #[cfg(feature = "std")]
-        pub fn encrypt(self, m: &[u8], ad: &[u8]) -> (Vec<u8>, [u8; TAG_BYTES]) {
+        pub fn encrypt(self, m: &[u8], ad: &[u8]) -> (Vec<u8>, Tag<TAG_BYTES>) {
             let mut c = vec![0u8; m.len()];
             let mut tag = [0u8; TAG_BYTES];
             unsafe {
@@ -87,7 +90,7 @@ pub mod aegis128l {
         /// * `ad` - Associated data
         /// # Returns
         /// Encrypted message and authentication tag.
-        pub fn encrypt_in_place(self, mc: &mut [u8], ad: &[u8]) -> [u8; TAG_BYTES] {
+        pub fn encrypt_in_place(self, mc: &mut [u8], ad: &[u8]) -> Tag<TAG_BYTES> {
             let mut tag = [0u8; TAG_BYTES];
             unsafe {
                 crypto_aead_aegis128l_encrypt_detached(
@@ -113,12 +116,7 @@ pub mod aegis128l {
         /// # Returns
         /// Decrypted message.
         #[cfg(feature = "std")]
-        pub fn decrypt(
-            &self,
-            c: &[u8],
-            tag: &[u8; TAG_BYTES],
-            ad: &[u8],
-        ) -> Result<Vec<u8>, Error> {
+        pub fn decrypt(&self, c: &[u8], tag: &Tag<TAG_BYTES>, ad: &[u8]) -> Result<Vec<u8>, Error> {
             let mut m = vec![0u8; c.len()];
             let res = unsafe {
                 crypto_aead_aegis128l_decrypt_detached(
@@ -147,7 +145,7 @@ pub mod aegis128l {
         pub fn decrypt_in_place(
             &self,
             mc: &mut [u8],
-            tag: &[u8; TAG_BYTES],
+            tag: &Tag<TAG_BYTES>,
             ad: &[u8],
         ) -> Result<(), Error> {
             let ret = unsafe {

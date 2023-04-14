@@ -131,7 +131,7 @@ pub mod aegis128l {
             self.update(msg0, msg1);
         }
 
-        fn mac<const TAG_BYTES: usize>(&mut self, adlen: usize, mlen: usize) -> [u8; TAG_BYTES] {
+        fn mac<const TAG_BYTES: usize>(&mut self, adlen: usize, mlen: usize) -> Tag<TAG_BYTES> {
             let tmp = {
                 let blocks = &self.blocks;
                 let mut sizes = [0u8; 16];
@@ -182,6 +182,9 @@ pub mod aegis128l {
     #[repr(transparent)]
     pub struct Aegis128L<const TAG_BYTES: usize>(State);
 
+    /// AEGIS-128L authentication tag
+    pub type Tag<const TAG_BYTES: usize> = [u8; TAG_BYTES];
+
     impl<const TAG_BYTES: usize> Aegis128L<TAG_BYTES> {
         /// Create a new AEAD instance.
         /// `key` and `nonce` must be 16 bytes long.
@@ -200,7 +203,7 @@ pub mod aegis128l {
         /// # Returns
         /// Encrypted message and authentication tag.
         #[cfg(feature = "std")]
-        pub fn encrypt(mut self, m: &[u8], ad: &[u8]) -> (Vec<u8>, [u8; TAG_BYTES]) {
+        pub fn encrypt(mut self, m: &[u8], ad: &[u8]) -> (Vec<u8>, Tag<TAG_BYTES>) {
             let state = &mut self.0;
             let mlen = m.len();
             let adlen = ad.len();
@@ -241,7 +244,7 @@ pub mod aegis128l {
         /// * `ad` - Associated data
         /// # Returns
         /// Encrypted message and authentication tag.
-        pub fn encrypt_in_place(mut self, mc: &mut [u8], ad: &[u8]) -> [u8; TAG_BYTES] {
+        pub fn encrypt_in_place(mut self, mc: &mut [u8], ad: &[u8]) -> Tag<TAG_BYTES> {
             let state = &mut self.0;
             let mclen = mc.len();
             let adlen = ad.len();
@@ -286,7 +289,7 @@ pub mod aegis128l {
         pub fn decrypt(
             mut self,
             c: &[u8],
-            tag: &[u8; TAG_BYTES],
+            tag: &Tag<TAG_BYTES>,
             ad: &[u8],
         ) -> Result<Vec<u8>, Error> {
             let state = &mut self.0;
@@ -337,7 +340,7 @@ pub mod aegis128l {
         pub fn decrypt_in_place(
             mut self,
             mc: &mut [u8],
-            tag: &[u8; TAG_BYTES],
+            tag: &Tag<TAG_BYTES>,
             ad: &[u8],
         ) -> Result<(), Error> {
             let state = &mut self.0;
