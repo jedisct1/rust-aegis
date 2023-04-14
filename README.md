@@ -83,4 +83,3 @@ Crates:
 | chacha20-poly1305 (OpenSSL) | 2.67 G/s  |
 | aes128-ocb (OpenSSL)        | 7.10 G/s  |
 | aegis128l (Zig)             | 14.08 G/s |
-| rocca (Zig)                 | 16.28 G/s |
