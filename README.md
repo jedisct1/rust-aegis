@@ -36,8 +36,6 @@ Crates:
 - `chacha20poly1305`
 - `aegis128l`
 
-`rustc` version `1.65.0`, `wasmtime` version `4.0.0`.
-
 ## Zen2
 
 | cipher            | speed      |
@@ -46,6 +44,15 @@ Crates:
 | aes128-gcm        | 973.18 M/s |
 | chacha20-poly1305 | 1.35 G/s   |
 | aegis128l         | 13.70 G/s  |
+
+## Zen4
+
+| cipher            | speed     |
+| ----------------- | --------- |
+| aes256-gcm        | 1.36 G/s  |
+| aes128-gcm        | 1.43 G/s  |
+| chacha20-poly1305 | 1.82 G/s  |
+| aegis128l         | 15.43 G/s |
 
 ## Macbook Pro - Apple M1
 
