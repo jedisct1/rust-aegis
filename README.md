@@ -67,18 +67,18 @@ Crates:
 
 | cipher            |      speed |
 | ----------------- | ---------: |
-| aes256-gcm        |  26.07 M/s |
-| aes128-gcm        |  30.10 M/s |
-| chacha20-poly1305 |  43.40 M/s |
+| aes256-gcm        |  62.97 M/s |
+| aes128-gcm        |  73.83 M/s |
+| chacha20-poly1305 |  88.92 M/s |
 | aegis128l         | 537.49 M/s |
 
 ## WebAssembly (Wasmtime, Apple M1)
 
 | cipher            |      speed |
 | ----------------- | ---------: |
-| aes256-gcm        |   2.75 M/s |
-| aes128-gcm        |   3.33 M/s |
-| chacha20-poly1305 |   4.10 M/s |
+| aes256-gcm        |  49.43 M/s |
+| aes128-gcm        |  59.37 M/s |
+| chacha20-poly1305 | 177.85 M/s |
 | aegis128l         | 533.85 M/s |
 
 ## Other implementations, Zen2
