@@ -103,4 +103,18 @@ mod tests {
             .unwrap();
         assert_eq!(mc, m);
     }
+
+    #[test]
+    fn test_aegis_tag256() {
+        let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
+        let ad = b"Comment numero un";
+        let key = b"YELLOW SUBMARINE";
+        let nonce = [0u8; 16];
+
+        let (c, tag) = Aegis128L::<32>::new(key, &nonce).encrypt(m, ad);
+        let m2 = Aegis128L::<32>::new(key, &nonce)
+            .decrypt(&c, &tag, ad)
+            .unwrap();
+        assert_eq!(m2, m);
+    }
 }
