@@ -225,7 +225,7 @@ crypto_aead_aegis128l_decrypt_detached(unsigned char *m, const unsigned char *c,
     aes_block_t                    state[8];
     CRYPTO_ALIGN(16) unsigned char src[32];
     CRYPTO_ALIGN(16) unsigned char dst[32];
-    CRYPTO_ALIGN(16) unsigned char computed_mac[16];
+    CRYPTO_ALIGN(16) unsigned char computed_mac[32];
     size_t                         i;
     size_t                         mlen;
     unsigned char                  d;
@@ -264,7 +264,7 @@ crypto_aead_aegis128l_decrypt_detached(unsigned char *m, const unsigned char *c,
 
     aegis128l_mac(computed_mac, adlen, mlen, state, tag_bytes);
     d = 0;
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < tag_bytes; i++) {
         d |= computed_mac[i] ^ mac[i];
     }
     if (d != 0) {
