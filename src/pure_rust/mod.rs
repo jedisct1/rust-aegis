@@ -95,8 +95,8 @@ pub mod aegis128l {
             let msg1 = AesBlock::from_bytes(&src[16..32]);
             let c0 = msg0.xor(z0);
             let c1 = msg1.xor(z1);
-            dst[..16].copy_from_slice(&c0.as_bytes());
-            dst[16..32].copy_from_slice(&c1.as_bytes());
+            dst[..16].copy_from_slice(&c0.to_bytes());
+            dst[16..32].copy_from_slice(&c1.to_bytes());
             self.update(msg0, msg1);
         }
 
@@ -106,8 +106,8 @@ pub mod aegis128l {
             let z1 = blocks[2].xor(blocks[5]).xor(blocks[6].and(blocks[7]));
             let msg0 = AesBlock::from_bytes(&src[0..16]).xor(z0);
             let msg1 = AesBlock::from_bytes(&src[16..32]).xor(z1);
-            dst[..16].copy_from_slice(&msg0.as_bytes());
-            dst[16..32].copy_from_slice(&msg1.as_bytes());
+            dst[..16].copy_from_slice(&msg0.to_bytes());
+            dst[16..32].copy_from_slice(&msg1.to_bytes());
             self.update(msg0, msg1);
         }
 
@@ -122,8 +122,8 @@ pub mod aegis128l {
             let msg_padded0 = AesBlock::from_bytes(&src_padded[0..16]).xor(z0);
             let msg_padded1 = AesBlock::from_bytes(&src_padded[16..32]).xor(z1);
 
-            dst[..16].copy_from_slice(&msg_padded0.as_bytes());
-            dst[16..32].copy_from_slice(&msg_padded1.as_bytes());
+            dst[..16].copy_from_slice(&msg_padded0.to_bytes());
+            dst[16..32].copy_from_slice(&msg_padded1.to_bytes());
             dst[len..].fill(0);
 
             let msg0 = AesBlock::from_bytes(&dst[0..16]);
@@ -154,7 +154,7 @@ pub mod aegis128l {
                         .xor(blocks[4])
                         .xor(blocks[5])
                         .xor(blocks[6])
-                        .as_bytes(),
+                        .to_bytes(),
                 ),
                 32 => {
                     tag[..16].copy_from_slice(
@@ -162,14 +162,14 @@ pub mod aegis128l {
                             .xor(blocks[1])
                             .xor(blocks[2])
                             .xor(blocks[3])
-                            .as_bytes(),
+                            .to_bytes(),
                     );
                     tag[16..].copy_from_slice(
                         &blocks[4]
                             .xor(blocks[5])
                             .xor(blocks[6])
                             .xor(blocks[7])
-                            .as_bytes(),
+                            .to_bytes(),
                     );
                 }
                 _ => unreachable!(),

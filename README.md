@@ -38,35 +38,35 @@ Crates:
 
 ## Zen2
 
-| cipher            | speed      |
-| ----------------- | ---------- |
+| cipher            |      speed |
+| ----------------- | ---------: |
 | aes256-gcm        | 934.41 M/s |
 | aes128-gcm        | 973.18 M/s |
-| chacha20-poly1305 | 1.35 G/s   |
-| aegis128l         | 13.70 G/s  |
+| chacha20-poly1305 |   1.35 G/s |
+| aegis128l         |  13.70 G/s |
 
 ## Zen4
 
-| cipher            | speed     |
-| ----------------- | --------- |
-| aes256-gcm        | 1.36 G/s  |
-| aes128-gcm        | 1.43 G/s  |
-| chacha20-poly1305 | 1.82 G/s  |
+| cipher            |     speed |
+| ----------------- | --------: |
+| aes256-gcm        |  1.36 G/s |
+| aes128-gcm        |  1.43 G/s |
+| chacha20-poly1305 |  1.82 G/s |
 | aegis128l         | 15.43 G/s |
 
 ## Macbook Pro - Apple M1
 
-| cipher            | speed      |
-| ----------------- | ---------- |
+| cipher            |      speed |
+| ----------------- | ---------: |
 | aes256-gcm        | 139.66 M/s |
 | aes128-gcm        | 173.09 M/s |
 | chacha20-poly1305 | 265.48 M/s |
-| aegis128l         | 13.88 G/s  |
+| aegis128l         |  13.88 G/s |
 
 ## WebAssembly (Wasmtime, Zen2)
 
-| cipher            | speed     |
-| ----------------- | --------- |
+| cipher            |     speed |
+| ----------------- | --------: |
 | aes256-gcm        | 26.07 M/s |
 | aes128-gcm        | 30.10 M/s |
 | chacha20-poly1305 | 43.40 M/s |
@@ -74,19 +74,19 @@ Crates:
 
 ## WebAssembly (Wasmtime, Apple M1)
 
-| cipher            | speed    |
-| ----------------- | -------- |
-| aes256-gcm        | 2.75 M/s |
-| aes128-gcm        | 3.33 M/s |
-| chacha20-poly1305 | 4.10 M/s |
-| aegis128l         | 3.64 M/s |
+| cipher            |      speed |
+| ----------------- | ---------: |
+| aes256-gcm        |   2.75 M/s |
+| aes128-gcm        |   3.33 M/s |
+| chacha20-poly1305 |   4.10 M/s |
+| aegis128l         | 533.85 M/s |
 
 ## Other implementations, Zen2
 
-| cipher (implementation)     | speed     |
-| --------------------------- | --------- |
-| aes256-gcm (OpenSSL)        | 4.97 G/s  |
-| aes128-gcm (OpenSSL)        | 6.89 G/s  |
-| chacha20-poly1305 (OpenSSL) | 2.67 G/s  |
-| aes128-ocb (OpenSSL)        | 7.10 G/s  |
+| cipher (implementation)     |     speed |
+| --------------------------- | --------: |
+| aes256-gcm (OpenSSL)        |  4.97 G/s |
+| aes128-gcm (OpenSSL)        |  6.89 G/s |
+| chacha20-poly1305 (OpenSSL) |  2.67 G/s |
+| aes128-ocb (OpenSSL)        |  7.10 G/s |
 | aegis128l (Zig)             | 14.08 G/s |
