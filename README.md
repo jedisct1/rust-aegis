@@ -63,14 +63,14 @@ Crates:
 | chacha20-poly1305 | 265.48 M/s |
 | aegis128l         |  13.88 G/s |
 
-## WebAssembly (Wasmtime, Zen2)
+## WebAssembly (Wasmtime, Zen4)
 
-| cipher            |     speed |
-| ----------------- | --------: |
-| aes256-gcm        | 26.07 M/s |
-| aes128-gcm        | 30.10 M/s |
-| chacha20-poly1305 | 43.40 M/s |
-| aegis128l         | 33.68 M/s |
+| cipher            |      speed |
+| ----------------- | ---------: |
+| aes256-gcm        |  26.07 M/s |
+| aes128-gcm        |  30.10 M/s |
+| chacha20-poly1305 |  43.40 M/s |
+| aegis128l         | 537.49 M/s |
 
 ## WebAssembly (Wasmtime, Apple M1)
 
