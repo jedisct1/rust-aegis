@@ -56,6 +56,9 @@ fn main() {
         ..Default::default()
     };
 
+    let res = bench.run(options, || test_aegis128l(&mut m));
+    println!("aegis128l         : {}", res.throughput(m.len() as _));
+
     let res = bench.run(options, || test_aes256gcm(&mut m));
     println!("aes256-gcm        : {}", res.throughput(m.len() as _));
 
@@ -67,7 +70,4 @@ fn main() {
 
     let res = bench.run(options, || test_ascon128a(&mut m));
     println!("ascon128a         : {}", res.throughput(m.len() as _));
-
-    let res = bench.run(options, || test_aegis128l(&mut m));
-    println!("aegis128l         : {}", res.throughput(m.len() as _));
 }
