@@ -13,7 +13,6 @@ readme = "README.md"
 
 [target."cfg(not(any(all(target_arch = \"x86_64\", target_feature = \"aes\"),all(target_arch = \"x86\", target_feature = \"aes\"))))".dependencies.softaes]
 version = "0.1"
-path = "/Users/j/src/rust-softaes"
 
 [target.'cfg(not(pure_rust))'.build-dependencies]
 cc = "1.0.79"
