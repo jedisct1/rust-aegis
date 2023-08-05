@@ -14,9 +14,11 @@ fn main() {
         .opt_level(3)
         .flag_if_supported("-Wno-unknown-pragmas")
         .flag_if_supported("-mtune=native")
+        .flag_if_supported("-maes")
+        .flag_if_supported("-mcrypto")
         .flag_if_supported("-mneon")
         .flag_if_supported("-maes")
-        .flag_if_supported("-msse4.1")
+        .flag_if_supported("-mavx")
         .file("src/c/aegis128l.c")
         .compile("aegis_aesni");
 }

@@ -10,12 +10,13 @@
 #endif
 #endif
 
-#ifdef __GNUC__
-#pragma GCC target("ssse3")
-#pragma GCC target("aes")
-#endif
-
 #ifdef __x86_64__
+
+#ifdef __clang__
+#pragma clang attribute push(__attribute__((target("avx,aes"))), apply_to = function)
+#elif defined(__GNUC__)
+#pragma GCC target("avx,aes")
+#endif
 
 #include <tmmintrin.h>
 #include <wmmintrin.h>
@@ -29,6 +30,12 @@ typedef __m128i aes_block_t;
 #define AES_ENC(A, B)             _mm_aesenc_si128((A), (B))
 
 #elif defined(__aarch64__)
+
+#ifdef __clang__
+#pragma clang attribute push(__attribute__((target("neon,crypto,aes"))), apply_to = function)
+#elif defined(__GNUC__)
+#pragma GCC target("neon,crypto,aes")
+#endif
 
 #include <arm_neon.h>
 
@@ -287,3 +294,7 @@ crypto_aead_aegis128l_decrypt(unsigned char *m, const unsigned char *c, size_t c
     }
     return ret;
 }
+
+#ifdef __clang__
+#pragma clang attribute pop
+#endif
