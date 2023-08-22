@@ -37,33 +37,37 @@ Crates:
 - `chacha20poly1305`
 - `aegis128l`
 
-## Zen2
+## AMD Zen2
 
 | cipher                       |      speed |
 | ---------------------------- | ---------: |
 | aes256-gcm (`aes-gcm` crate) | 934.41 M/s |
 | aes128-gcm (`aes-gcm` crate) | 973.18 M/s |
 | chacha20-poly1305            |   1.35 G/s |
+| aes256-gcm (`boring` crate)  |   3.31 G/s |
+| aes128-gcm (`boring` crate)  |   3.61 G/s |
 | aegis128l                    |  13.70 G/s |
 
-## Zen4
+## AMD Zen4
 
 | cipher                       |     speed |
 | ---------------------------- | --------: |
-| aes256-gcm (`aes-gcm` crate) |  1.36 G/s |
-| aes128-gcm (`aes-gcm` crate) |  1.43 G/s |
-| chacha20-poly1305            |  1.82 G/s |
-| aegis128l                    | 15.43 G/s |
+| aes128-gcm (`aes-gcm` crate) |  1.73 G/s |
+| aes256-gcm (`aes-gcm` crate) |  1.86 G/s |
+| chacha20-poly1305            |  2.47 G/s |
+| aes256-gcm (`boring` crate)  |  5.14 G/s |
+| aes128-gcm (`boring` crate)  |  5.92 G/s |
+| aegis128l                    | 23.35 G/s |
 
 ## Macbook Pro - Apple M1
 
 | cipher                       |      speed |
 | ---------------------------- | ---------: |
 | aes256-gcm (`aes-gcm` crate) | 139.66 M/s |
-| aes256-gcm (`boring` crate)  |   5.14 G/s |
 | aes128-gcm (`aes-gcm` crate) | 173.09 M/s |
-| aes128-gcm (`boring` crate)  |   6.08 G/s |
 | chacha20-poly1305            | 265.48 M/s |
+| aes256-gcm (`boring` crate)  |   5.14 G/s |
+| aes128-gcm (`boring` crate)  |   6.08 G/s |
 | aegis128l                    |  13.88 G/s |
 
 ## WebAssembly (Wasmtime, Zen4)
@@ -84,12 +88,12 @@ Crates:
 | chacha20-poly1305 | 177.85 M/s |
 | aegis128l         | 533.85 M/s |
 
-## Other implementations, Zen2
+## Other implementations, AMD Zen2
 
 | cipher (implementation)     |     speed |
 | --------------------------- | --------: |
+| chacha20-poly1305 (OpenSSL) |  2.67 G/s |
 | aes256-gcm (OpenSSL)        |  4.97 G/s |
 | aes128-gcm (OpenSSL)        |  6.89 G/s |
-| chacha20-poly1305 (OpenSSL) |  2.67 G/s |
 | aes128-ocb (OpenSSL)        |  7.10 G/s |
 | aegis128l (Zig)             | 14.08 G/s |
