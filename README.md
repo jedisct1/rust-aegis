@@ -33,35 +33,38 @@ Benchmarks take a 16384 bytes input block. Results are in bytes per second.
 Crates:
 
 - `aes-gcm`
+- `boring`
 - `chacha20poly1305`
 - `aegis128l`
 
 ## Zen2
 
-| cipher            |      speed |
-| ----------------- | ---------: |
-| aes256-gcm        | 934.41 M/s |
-| aes128-gcm        | 973.18 M/s |
-| chacha20-poly1305 |   1.35 G/s |
-| aegis128l         |  13.70 G/s |
+| cipher                       |      speed |
+| ---------------------------- | ---------: |
+| aes256-gcm (`aes-gcm` crate) | 934.41 M/s |
+| aes128-gcm (`aes-gcm` crate) | 973.18 M/s |
+| chacha20-poly1305            |   1.35 G/s |
+| aegis128l                    |  13.70 G/s |
 
 ## Zen4
 
-| cipher            |     speed |
-| ----------------- | --------: |
-| aes256-gcm        |  1.36 G/s |
-| aes128-gcm        |  1.43 G/s |
-| chacha20-poly1305 |  1.82 G/s |
-| aegis128l         | 15.43 G/s |
+| cipher                       |     speed |
+| ---------------------------- | --------: |
+| aes256-gcm (`aes-gcm` crate) |  1.36 G/s |
+| aes128-gcm (`aes-gcm` crate) |  1.43 G/s |
+| chacha20-poly1305            |  1.82 G/s |
+| aegis128l                    | 15.43 G/s |
 
 ## Macbook Pro - Apple M1
 
-| cipher            |      speed |
-| ----------------- | ---------: |
-| aes256-gcm        | 139.66 M/s |
-| aes128-gcm        | 173.09 M/s |
-| chacha20-poly1305 | 265.48 M/s |
-| aegis128l         |  13.88 G/s |
+| cipher                       |      speed |
+| ---------------------------- | ---------: |
+| aes256-gcm (`aes-gcm` crate) | 139.66 M/s |
+| aes256-gcm (`boring` crate)  |   5.14 G/s |
+| aes128-gcm (`aes-gcm` crate) | 173.09 M/s |
+| aes128-gcm (`boring` crate)  |   6.08 G/s |
+| chacha20-poly1305            | 265.48 M/s |
+| aegis128l                    |  13.88 G/s |
 
 ## WebAssembly (Wasmtime, Zen4)
 

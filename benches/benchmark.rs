@@ -13,11 +13,33 @@ fn test_aes256gcm(m: &mut [u8]) {
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
+fn test_aes256gcm_boringssl(m: &mut [u8]) {
+    use boring::symm;
+    use symm::Cipher;
+
+    let cipher = Cipher::aes_256_gcm();
+    let key = [0u8; 32];
+    let nonce = [0u8; 12];
+    let mut tag = [0u8; 16];
+    let _ = symm::encrypt_aead(cipher, &key, Some(&nonce), &[], m, &mut tag).unwrap();
+}
+
 fn test_aes128gcm(m: &mut [u8]) {
     let key = aes_gcm::Key::<Aes128Gcm>::from_slice(&[0u8; 16]);
     let nonce = aes_gcm::Nonce::from_slice(&[0u8; 12]);
     let state = Aes128Gcm::new(key);
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
+}
+
+fn test_aes128gcm_boringssl(m: &mut [u8]) {
+    use boring::symm;
+    use symm::Cipher;
+
+    let cipher = Cipher::aes_128_gcm();
+    let key = [0u8; 16];
+    let nonce = [0u8; 12];
+    let mut tag = [0u8; 16];
+    let _ = symm::encrypt_aead(cipher, &key, Some(&nonce), &[], m, &mut tag).unwrap();
 }
 
 fn test_chacha20poly1305(m: &mut [u8]) {
@@ -57,17 +79,23 @@ fn main() {
     };
 
     let res = bench.run(options, || test_aegis128l(&mut m));
-    println!("aegis128l         : {}", res.throughput(m.len() as _));
-
-    let res = bench.run(options, || test_aes256gcm(&mut m));
-    println!("aes256-gcm        : {}", res.throughput(m.len() as _));
+    println!("aegis128l           : {}", res.throughput(m.len() as _));
 
     let res = bench.run(options, || test_aes128gcm(&mut m));
-    println!("aes128-gcm        : {}", res.throughput(m.len() as _));
+    println!("aes128-gcm (aes-gcm): {}", res.throughput(m.len() as _));
+
+    let res = bench.run(options, || test_aes128gcm_boringssl(&mut m));
+    println!("aes128-gcm (boring) : {}", res.throughput(m.len() as _));
+
+    let res = bench.run(options, || test_aes256gcm(&mut m));
+    println!("aes256-gcm (aes-gcm): {}", res.throughput(m.len() as _));
+
+    let res = bench.run(options, || test_aes256gcm_boringssl(&mut m));
+    println!("aes256-gcm (boring) : {}", res.throughput(m.len() as _));
 
     let res = bench.run(options, || test_chacha20poly1305(&mut m));
-    println!("chacha20-poly1305 : {}", res.throughput(m.len() as _));
+    println!("chacha20-poly1305   : {}", res.throughput(m.len() as _));
 
     let res = bench.run(options, || test_ascon128a(&mut m));
-    println!("ascon128a         : {}", res.throughput(m.len() as _));
+    println!("ascon128a           : {}", res.throughput(m.len() as _));
 }
