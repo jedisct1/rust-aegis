@@ -45,7 +45,7 @@ static INITIALIZING: core::sync::atomic::AtomicBool = core::sync::atomic::Atomic
 
 /// Tag length in bits must be 128 or 256
 #[derive(Copy, Clone, Debug)]
-pub struct Aegis256x2<const TAG_BYTES: usize> {
+pub struct Aegis256X2<const TAG_BYTES: usize> {
     key: Key,
     nonce: Nonce,
 }
@@ -53,7 +53,7 @@ pub struct Aegis256x2<const TAG_BYTES: usize> {
 /// AEGIS-256X2 authentication tag
 pub type Tag<const TAG_BYTES: usize> = [u8; TAG_BYTES];
 
-impl<const TAG_BYTES: usize> Aegis256x2<TAG_BYTES> {
+impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
     fn ensure_init() {
         #[cfg(feature = "std")]
         INIT.call_once(|| assert_eq!(unsafe { aegis_init() }, 0));
@@ -85,7 +85,7 @@ impl<const TAG_BYTES: usize> Aegis256x2<TAG_BYTES> {
             "Invalid tag length, must be 16 or 32"
         );
         Self::ensure_init();
-        Aegis256x2 {
+        Aegis256X2 {
             key: *key,
             nonce: *nonce,
         }
