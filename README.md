@@ -13,7 +13,7 @@ and is key committing.
 
 `std` is the default.
 
-- `pure-rust`: don't use the `cc` crate to take advantage of the implementations from [`libaegis`](https://github.com/jedisct1/libaegis). Setting this flag will substantially degrade performance.\
+- `pure-rust`: don't use the `cc` crate to take advantage of the implementations from [`libaegis`](https://github.com/jedisct1/libaegis). Setting this flag will substantially degrade performance.
 
 A benchmark can be run that way:
 
