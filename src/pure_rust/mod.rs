@@ -11,16 +11,16 @@ mod aes_soft;
 )))]
 use aes_soft::AesBlock;
 
-#[cfg(all(any(
+#[cfg(any(
     all(target_arch = "x86_64", target_feature = "aes"),
     all(target_arch = "x86", target_feature = "aes")
-)))]
+))]
 mod aes_ni;
 
-#[cfg(all(any(
+#[cfg(any(
     all(target_arch = "x86_64", target_feature = "aes"),
     all(target_arch = "x86", target_feature = "aes")
-)))]
+))]
 use aes_ni::AesBlock;
 
 #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
