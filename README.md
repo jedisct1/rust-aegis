@@ -57,7 +57,11 @@ Crates:
 | chacha20-poly1305            |  2.47 G/s |
 | aes256-gcm (`boring` crate)  |  5.14 G/s |
 | aes128-gcm (`boring` crate)  |  5.92 G/s |
+| aegis256                     | 14.36 G/s |
+| aegis256x2                   | 26.92 G/s |
 | aegis128l                    | 23.35 G/s |
+| aegis128x2                   | 42.68 G/s |
+| aegis128x4                   | 55.28 G/s |
 
 ## Macbook Pro - Apple M1
 
@@ -68,7 +72,11 @@ Crates:
 | chacha20-poly1305            | 265.48 M/s |
 | aes256-gcm (`boring` crate)  |   5.14 G/s |
 | aes128-gcm (`boring` crate)  |   6.08 G/s |
-| aegis128l                    |  13.88 G/s |
+| aegis256                     |   7.94 G/s |
+| aegis256x2                   |  10.56 G/s |
+| aegis128l                    |  14.27 G/s |
+| aegis128x2                   |  15.98 G/s |
+| aegis128x4                   |  12.01 G/s |
 
 ## WebAssembly (Wasmtime, Zen4)
 
