@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "std")]
 use std::fmt;
 
 #[cfg(any(
@@ -29,6 +30,7 @@ pub enum Error {
     InvalidTag,
 }
 
+#[cfg(feature = "std")]
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

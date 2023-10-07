@@ -1,0 +1,3 @@
+[submodule "src/c/libaegis"]
+	path = src/c/libaegis
+	url = https://github.com/jedisct1/libaegis
