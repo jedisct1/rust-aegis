@@ -37,8 +37,6 @@ Crates:
 - `chacha20poly1305`
 - `aegis128l`
 
-
-
 ## AMD Zen4
 
 | cipher                       |     speed |
