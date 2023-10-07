@@ -1,7 +1,7 @@
 # AEGIS for Rust
 
 This is a Rust implementation of the
-[AEGIS-128L](https://datatracker.ietf.org/doc/draft-irtf-cfrg-aegis-aead/)
+[AEGIS](https://datatracker.ietf.org/doc/draft-irtf-cfrg-aegis-aead/)
 authenticated cipher, ported from the Zig standard library.
 
 AEGIS is extremely fast on CPUs with AES acceleration, has a large nonce size,
@@ -13,7 +13,7 @@ and is key committing.
 
 `std` is the default.
 
-- `pure-rust`: don't use the `cc` crate to take advantage of the optimized implementation ported from libsodium. Setting this flag will substantially degrade performance. Only required if you need to support old x86_64 or ARM CPUs without AES acceleration.
+- `pure-rust`: don't use the `cc` crate to take advantage of the implementations from [`libaegis`](https://github.com/jedisct1/libaegis). Setting this flag will substantially degrade performance.\
 
 A benchmark can be run that way:
 
