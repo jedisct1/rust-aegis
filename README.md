@@ -37,16 +37,7 @@ Crates:
 - `chacha20poly1305`
 - `aegis128l`
 
-## AMD Zen2
 
-| cipher                       |      speed |
-| ---------------------------- | ---------: |
-| aes256-gcm (`aes-gcm` crate) | 934.41 M/s |
-| aes128-gcm (`aes-gcm` crate) | 973.18 M/s |
-| chacha20-poly1305            |   1.35 G/s |
-| aes256-gcm (`boring` crate)  |   3.31 G/s |
-| aes128-gcm (`boring` crate)  |   3.61 G/s |
-| aegis128l                    |  13.70 G/s |
 
 ## AMD Zen4
 
@@ -62,6 +53,17 @@ Crates:
 | aegis128l                    | 23.35 G/s |
 | aegis128x2                   | 42.68 G/s |
 | aegis128x4                   | 55.28 G/s |
+
+## AMD Zen2
+
+| cipher                       |      speed |
+| ---------------------------- | ---------: |
+| aes256-gcm (`aes-gcm` crate) | 934.41 M/s |
+| aes128-gcm (`aes-gcm` crate) | 973.18 M/s |
+| chacha20-poly1305            |   1.35 G/s |
+| aes256-gcm (`boring` crate)  |   3.31 G/s |
+| aes128-gcm (`boring` crate)  |   3.61 G/s |
+| aegis128l                    |  13.70 G/s |
 
 ## Macbook Pro - Apple M1
 
