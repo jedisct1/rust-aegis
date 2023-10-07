@@ -30,3 +30,4 @@ mod aes_armcrypto;
 use aes_armcrypto::AesBlock;
 
 pub mod aegis128l;
+pub mod aegis256;

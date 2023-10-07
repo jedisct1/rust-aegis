@@ -45,6 +45,7 @@ impl std::error::Error for Error {}
 #[cfg(test)]
 mod tests {
     use crate::aegis128l::Aegis128L;
+    use crate::aegis256::Aegis256;
 
     #[test]
     #[cfg(feature = "std")]
@@ -115,6 +116,34 @@ mod tests {
 
         let (c, tag) = Aegis128L::<32>::new(key, &nonce).encrypt(m, ad);
         let m2 = Aegis128L::<32>::new(key, &nonce)
+            .decrypt(&c, &tag, ad)
+            .unwrap();
+        assert_eq!(m2, m);
+    }
+
+    #[test]
+    fn test_aegis256() {
+        let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
+        let ad = b"Comment numero un";
+        let key = b"YELLOW SUBMARINEyellow submarine";
+        let nonce = [0u8; 32];
+
+        let (c, tag) = Aegis256::<16>::new(key, &nonce).encrypt(m, ad);
+        let expected_c = [
+            28, 86, 25, 203, 194, 96, 35, 113, 83, 56, 121, 160, 252, 40, 16, 52, 168, 107, 157,
+            22, 5, 184, 93, 52, 56, 228, 198, 179, 17, 239, 55, 60, 36, 31, 55, 181, 19, 55, 23,
+            242, 188, 226, 59, 198, 71, 124, 124, 139, 40, 64, 229, 233, 149, 239, 19, 34, 19, 253,
+            171, 97, 1, 103, 5, 118, 182, 174, 140, 67, 10, 68, 251, 70, 119, 28, 42, 245, 143,
+            132, 252, 28, 133, 61, 225, 187, 133, 32, 81, 17, 63, 178, 172, 206, 64, 49, 56, 4, 8,
+            117, 42, 115, 150, 157, 187, 110, 161, 229, 148, 33, 107, 246, 11, 21, 71, 120,
+        ];
+        let expected_tag = [
+            165, 12, 79, 88, 207, 169, 198, 202, 14, 54, 207, 237, 114, 121, 97, 30,
+        ];
+        assert_eq!(c, expected_c);
+        assert_eq!(tag, expected_tag);
+
+        let m2 = Aegis256::<16>::new(key, &nonce)
             .decrypt(&c, &tag, ad)
             .unwrap();
         assert_eq!(m2, m);
