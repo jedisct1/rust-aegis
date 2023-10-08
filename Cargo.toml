@@ -1,10 +1,10 @@
 [package]
 name = "aegis"
-version = "0.4.8"
+version = "0.4.9"
 edition = "2018"
 authors = ["Frank Denis <github@pureftpd.org>"]
-description = "AEGIS authenticated cipher (AEGIS128L)"
-keywords = ["aegis128", "cipher", "aead", "aes", "crypto"]
+description = "AEGIS authenticated ciphers (AEGIS-128, AEGIS-256)"
+keywords = ["aegis128l", "cipher", "aead", "aes", "crypto"]
 license = "MIT"
 homepage = "https://github.com/jedisct1/rust-aegis"
 repository = "https://github.com/jedisct1/rust-aegis"
