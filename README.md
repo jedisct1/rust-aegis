@@ -7,6 +7,8 @@ authenticated cipher, ported from the Zig standard library.
 AEGIS is extremely fast on CPUs with AES acceleration, has a large nonce size,
 and is key committing.
 
+# [API documentation](https://docs.rs/aegis)
+
 # Cargo flags
 
 - `std`: allow dynamic allocations
@@ -48,6 +50,7 @@ Crates:
 | aes128-gcm (`boring` crate)  |  5.92 G/s |
 | aegis256                     | 14.36 G/s |
 | aegis256x2                   | 26.92 G/s |
+| aegis256x4                   | 42.82 G/s |
 | aegis128l                    | 23.35 G/s |
 | aegis128x2                   | 42.68 G/s |
 | aegis128x4                   | 55.28 G/s |
