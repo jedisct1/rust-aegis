@@ -41,32 +41,25 @@ Crates:
 
 ## AMD Zen4
 
+rust 1.73, zig cc 0.11
+
 | cipher                       |     speed |
 | ---------------------------- | --------: |
-| aes128-gcm (`aes-gcm` crate) |  1.73 G/s |
-| aes256-gcm (`aes-gcm` crate) |  1.86 G/s |
-| chacha20-poly1305            |  2.47 G/s |
-| aes256-gcm (`boring` crate)  |  5.14 G/s |
-| aes128-gcm (`boring` crate)  |  5.92 G/s |
-| aegis256                     | 14.36 G/s |
-| aegis256x2                   | 26.92 G/s |
-| aegis256x4                   | 42.82 G/s |
-| aegis128l                    | 23.35 G/s |
-| aegis128x2                   | 42.68 G/s |
-| aegis128x4                   | 55.28 G/s |
-
-## AMD Zen2
-
-| cipher                       |      speed |
-| ---------------------------- | ---------: |
-| aes256-gcm (`aes-gcm` crate) | 934.41 M/s |
-| aes128-gcm (`aes-gcm` crate) | 973.18 M/s |
-| chacha20-poly1305            |   1.35 G/s |
-| aes256-gcm (`boring` crate)  |   3.31 G/s |
-| aes128-gcm (`boring` crate)  |   3.61 G/s |
-| aegis128l                    |  13.70 G/s |
+| aes128-gcm (`aes-gcm` crate) |  2.19 G/s |
+| aes256-gcm (`aes-gcm` crate) |  2.03 G/s |
+| chacha20-poly1305            |  2.00 G/s |
+| aes256-gcm (`boring` crate)  |  5.93 G/s |
+| aes128-gcm (`boring` crate)  |  6.33 G/s |
+| aegis256                     | 15.40 G/s |
+| aegis256x2                   | 30.60 G/s |
+| aegis256x4                   | 46.17 G/s |
+| aegis128l                    | 26.16 G/s |
+| aegis128x2                   | 50.35 G/s |
+| aegis128x4                   | 66.22 G/s |
 
 ## Macbook Pro - Apple M1
+
+rust 1.73, Xcode
 
 | cipher                       |      speed |
 | ---------------------------- | ---------: |
@@ -99,13 +92,3 @@ Crates:
 | aes128-gcm        |  59.37 M/s |
 | chacha20-poly1305 | 177.85 M/s |
 | aegis128l         | 533.85 M/s |
-
-## Other implementations, AMD Zen2
-
-| cipher (implementation)     |     speed |
-| --------------------------- | --------: |
-| chacha20-poly1305 (OpenSSL) |  2.67 G/s |
-| aes256-gcm (OpenSSL)        |  4.97 G/s |
-| aes128-gcm (OpenSSL)        |  6.89 G/s |
-| aes128-ocb (OpenSSL)        |  7.10 G/s |
-| aegis128l (Zig)             | 14.08 G/s |
