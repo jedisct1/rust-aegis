@@ -16,6 +16,11 @@ use aegis::aegis128x4::Aegis128X4;
     not(any(target_arch = "x86_64", target_arch = "aarch64"))
 )))]
 use aegis::aegis256x2::Aegis256X2;
+#[cfg(not(any(
+    feature = "pure-rust",
+    not(any(target_arch = "x86_64", target_arch = "aarch64"))
+)))]
+use aegis::aegis256x4::Aegis256X4;
 
 use aes_gcm::{
     aead::{AeadInPlace as _, KeyInit as _},
@@ -123,6 +128,17 @@ fn test_aegis256x2(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
+#[cfg(not(any(
+    feature = "pure-rust",
+    not(any(target_arch = "x86_64", target_arch = "aarch64"))
+)))]
+fn test_aegis256x4(m: &mut [u8]) {
+    let key = [0u8; 32];
+    let nonce = [0u8; 32];
+    let state = Aegis256X4::<16>::new(&nonce, &key);
+    state.encrypt_in_place(m, &[]);
+}
+
 fn main() {
     let bench = Bench::new();
     let mut m = vec![0xd0u8; 16384];
@@ -158,6 +174,9 @@ fn main() {
     {
         let res = bench.run(options, || test_aegis256x2(&mut m));
         println!("aegis256x2          : {}", res.throughput(m.len() as _));
+
+        let res = bench.run(options, || test_aegis256x4(&mut m));
+        println!("aegis256x4          : {}", res.throughput(m.len() as _));
     }
 
     let res = bench.run(options, || test_aegis256(&mut m));

@@ -74,6 +74,7 @@ Crates:
 | aes128-gcm (`boring` crate)  |   6.08 G/s |
 | aegis256                     |   7.94 G/s |
 | aegis256x2                   |  10.56 G/s |
+| aegis256x4                   |  11.20 G/s |
 | aegis128l                    |  14.27 G/s |
 | aegis128x2                   |  15.98 G/s |
 | aegis128x4                   |  12.01 G/s |
