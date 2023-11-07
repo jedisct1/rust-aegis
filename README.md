@@ -2,7 +2,7 @@
 
 This is a Rust implementation of the
 [AEGIS](https://datatracker.ietf.org/doc/draft-irtf-cfrg-aegis-aead/)
-authenticated cipher, ported from the Zig standard library.
+authenticated cipher.
 
 AEGIS is extremely fast on CPUs with AES acceleration, has a large nonce size,
 and is key committing.
