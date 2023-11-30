@@ -24,11 +24,21 @@ export RUSTFLAGS="-C target-cpu=native"
 cargo bench
 ```
 
-For benchmarking, `RUSTFLAGS` is set so that the AES-GCM implementations can take advantage of hardware acceleration.
+If `clang` or `zig cc` are present on your system, you can use with:
+
+```sh
+export CC="zig cc"
+```
+or
+```sh
+export CC="clang"
+```
+
+prior to running `cargo` commands.
 
 # Benchmarks
 
-Benchmarks take a 16384 bytes input block. Results are in bytes per second.
+Benchmarks take a 16384 bytes input block. Results are in bytes per second. `RUSTFLAGS` is set so that the Rust `aes-gcm` crate can take advantage of hardware acceleration.
 
 ## Rust implementations
 
