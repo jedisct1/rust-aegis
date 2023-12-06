@@ -36,6 +36,7 @@ fn test_aes256gcm(m: &mut [u8]) {
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
+#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 fn test_aes256gcm_boringssl(m: &mut [u8]) {
     use boring::symm;
     use symm::Cipher;
@@ -54,6 +55,7 @@ fn test_aes128gcm(m: &mut [u8]) {
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
+#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 fn test_aes128gcm_boringssl(m: &mut [u8]) {
     use boring::symm;
     use symm::Cipher;
@@ -185,14 +187,20 @@ fn main() {
     let res = bench.run(options, || test_aes128gcm(&mut m));
     println!("aes128-gcm (aes-gcm): {}", res.throughput(m.len() as _));
 
-    let res = bench.run(options, || test_aes128gcm_boringssl(&mut m));
-    println!("aes128-gcm (boring) : {}", res.throughput(m.len() as _));
+    #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+    {
+        let res = bench.run(options, || test_aes128gcm_boringssl(&mut m));
+        println!("aes128-gcm (boring) : {}", res.throughput(m.len() as _));
+    }
 
     let res = bench.run(options, || test_aes256gcm(&mut m));
     println!("aes256-gcm (aes-gcm): {}", res.throughput(m.len() as _));
 
-    let res = bench.run(options, || test_aes256gcm_boringssl(&mut m));
-    println!("aes256-gcm (boring) : {}", res.throughput(m.len() as _));
+    #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+    {
+        let res = bench.run(options, || test_aes256gcm_boringssl(&mut m));
+        println!("aes256-gcm (boring) : {}", res.throughput(m.len() as _));
+    }
 
     let res = bench.run(options, || test_chacha20poly1305(&mut m));
     println!("chacha20-poly1305   : {}", res.throughput(m.len() as _));
