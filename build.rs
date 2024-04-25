@@ -12,6 +12,7 @@ fn main() {
     }
     cc::Build::new()
         .opt_level(3)
+        .flag_if_supported("-Wno-unused-command-line-argument")
         .flag_if_supported("-Wno-unknown-pragmas")
         .flag_if_supported("-mtune=native")
         .flag_if_supported("-maes")
