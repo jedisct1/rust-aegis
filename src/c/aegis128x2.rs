@@ -45,6 +45,9 @@ extern "C" {
     fn aegis128x2_mac_final(st_: *mut aegis128x2_state, mac: *mut u8, maclen: usize) -> c_int;
 
     fn aegis128x2_mac_verify(st_: *mut aegis128x2_state, mac: *const u8, maclen: usize) -> c_int;
+
+    fn aegis128x2_mac_state_clone(dst: *mut aegis128x2_state, src: *const aegis128x2_state);
+
 }
 
 #[cfg(feature = "std")]
@@ -212,9 +215,21 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct Aegis128X2Mac<const TAG_BYTES: usize> {
     st: aegis128x2_state,
+}
+
+impl<const TAG_BYTES: usize> Clone for Aegis128X2Mac<TAG_BYTES> {
+    fn clone(&self) -> Self {
+        let mut st = MaybeUninit::<aegis128x2_state>::uninit();
+        unsafe {
+            aegis128x2_mac_state_clone(st.as_mut_ptr(), &self.st);
+        }
+        Aegis128X2Mac {
+            st: unsafe { st.assume_init() },
+        }
+    }
 }
 
 impl<const TAG_BYTES: usize> Aegis128X2Mac<TAG_BYTES> {

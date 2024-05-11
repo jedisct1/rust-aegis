@@ -146,21 +146,21 @@ fn test_aegis256x4(m: &mut [u8]) {
 
 #[cfg(not(feature = "pure-rust"))]
 fn test_aegis128l_mac(state: &Aegis128LMac<32>, m: &[u8]) {
-    let mut state = *state;
+    let mut state = state.clone();
     state.update(m);
     state.finalize();
 }
 
 #[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x2_mac(state: &Aegis128X2Mac<32>, m: &[u8]) {
-    let mut state = *state;
+    let mut state = state.clone();
     state.update(m);
     state.finalize();
 }
 
 #[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
-    let mut state = *state;
+    let mut state = state.clone();
     state.update(m);
     state.finalize();
 }
