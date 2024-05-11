@@ -199,6 +199,10 @@ fn main() {
         let res = bench.run(options, || sthash.hash(&m));
         println!("sthash              : {}", res.throughput(m.len() as _));
 
+        let b3 = blake3::Hasher::new_keyed(&[0u8; 32]);
+        let res = bench.run(options, || b3.clone().update(&m).finalize());
+        println!("blake3              : {}", res.throughput(m.len() as _));
+
         println!();
     }
 
