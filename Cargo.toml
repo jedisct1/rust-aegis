@@ -22,6 +22,7 @@ benchmark-simple = "0.1.9"
 ascon-aead = "0.4.2"
 aes-gcm = "0.10.3"
 chacha20poly1305 = "0.10.1"
+sthash = "0.2.15"
 
 [target."cfg(not(any(target_arch = \"wasm32\", target_arch = \"wasm64\")))".dev-dependencies.boring]
 version = "4.6.0"

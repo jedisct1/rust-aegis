@@ -195,6 +195,10 @@ fn main() {
         let res = bench.run(options, || test_aegis128l_mac(&state, &m));
         println!("aegis128l-mac       : {}", res.throughput(m.len() as _));
 
+        let sthash = sthash::Hasher::new(sthash::Key::from_seed(&[0u8; 32], None), None);
+        let res = bench.run(options, || sthash.hash(&m));
+        println!("sthash              : {}", res.throughput(m.len() as _));
+
         println!();
     }
 
