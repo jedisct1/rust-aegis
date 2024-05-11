@@ -1,4 +1,4 @@
-use core::ffi::c_int;
+use core::{ffi::c_int, mem::MaybeUninit};
 
 pub use crate::Error;
 
@@ -7,6 +7,9 @@ pub type Key = [u8; 32];
 
 /// AEGIS-256X4 nonce
 pub type Nonce = [u8; 32];
+
+#[allow(non_camel_case_types)]
+type aegis256x4_state = [u8; 576];
 
 extern "C" {
     fn aegis_init() -> c_int;
@@ -34,6 +37,14 @@ extern "C" {
         npub: *const u8,
         k: *const u8,
     ) -> c_int;
+
+    fn aegis256x4_mac_init(st_: *mut aegis256x4_state, k: *const u8);
+
+    fn aegis256x4_mac_update(st_: *mut aegis256x4_state, m: *const u8, mlen: usize) -> c_int;
+
+    fn aegis256x4_mac_final(st_: *mut aegis256x4_state, mac: *mut u8, maclen: usize) -> c_int;
+
+    fn aegis256x4_mac_verify(st_: *mut aegis256x4_state, mac: *const u8, maclen: usize) -> c_int;
 }
 
 #[cfg(feature = "std")]
@@ -195,6 +206,83 @@ impl<const TAG_BYTES: usize> Aegis256X4<TAG_BYTES> {
             )
         };
         if ret != 0 {
+            return Err(Error::InvalidTag);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Aegis256X4Mac<const TAG_BYTES: usize> {
+    st: aegis256x4_state,
+}
+
+impl<const TAG_BYTES: usize> Aegis256X4Mac<TAG_BYTES> {
+    fn ensure_init() {
+        #[cfg(feature = "std")]
+        INIT.call_once(|| assert_eq!(unsafe { aegis_init() }, 0));
+
+        #[cfg(not(feature = "std"))]
+        {
+            use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
+
+            if INITIALIZED.load(Acquire) {
+                return;
+            }
+            let initializing = match INITIALIZING.compare_exchange(false, true, Acquire, Relaxed) {
+                Ok(initializing) => initializing,
+                Err(initializing) => initializing,
+            };
+            if initializing {
+                while !INITIALIZED.load(Acquire) {}
+            } else {
+                assert_eq!(unsafe { aegis_init() }, 0);
+                INITIALIZED.store(true, Release);
+                INITIALIZING.store(false, Release);
+            }
+        }
+    }
+
+    /// Initializes the MAC state with a key.
+    ///
+    /// The state can be cloned to authenticate multiple messages with the same key.
+    pub fn new(key: &Key) -> Self {
+        assert!(
+            TAG_BYTES == 16 || TAG_BYTES == 32,
+            "Invalid tag length, must be 16 or 32"
+        );
+        Self::ensure_init();
+        let mut st = MaybeUninit::<aegis256x4_state>::uninit();
+        unsafe {
+            aegis256x4_mac_init(st.as_mut_ptr(), key.as_ptr());
+        }
+        Aegis256X4Mac {
+            st: unsafe { st.assume_init() },
+        }
+    }
+
+    /// Updates the MAC state with a message
+    ///
+    /// This function can be called multiple times to update the MAC state with additional data.
+    pub fn update(&mut self, m: &[u8]) {
+        unsafe {
+            aegis256x4_mac_update(&mut self.st, m.as_ptr(), m.len());
+        }
+    }
+
+    /// Finalizes the MAC and returns the authentication tag
+    pub fn finalize(mut self) -> Tag<TAG_BYTES> {
+        let mut tag = [0u8; TAG_BYTES];
+        unsafe {
+            aegis256x4_mac_final(&mut self.st, tag.as_mut_ptr(), TAG_BYTES);
+        }
+        tag
+    }
+
+    /// Verifies the authentication tag
+    pub fn verify(mut self, tag: &Tag<TAG_BYTES>) -> Result<(), Error> {
+        let res = unsafe { aegis256x4_mac_verify(&mut self.st, tag.as_ptr(), TAG_BYTES) };
+        if res != 0 {
             return Err(Error::InvalidTag);
         }
         Ok(())

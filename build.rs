@@ -19,7 +19,6 @@ fn main() {
         .flag_if_supported("-mcrypto")
         .flag_if_supported("-mneon")
         .flag_if_supported("-maes")
-        .flag_if_supported("-mavx")
         .include("src/c/libaegis/src/include")
         .file("src/c/libaegis/src/aegis128l/aegis128l.c")
         .file("src/c/libaegis/src/aegis128l/aegis128l_aesni.c")
