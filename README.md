@@ -20,6 +20,6 @@ Benchmarks can be reproduced using the `cargo bench` or `cargo-zigbuild bench` c
 
 ![AEGIS benchmark results](img/bench-encryption.png)
 
-## MAC (64 KB)
+## Authentication (64 KB)
 
 ![AEGIS-MAC benchmark results](img/bench-mac.png)
