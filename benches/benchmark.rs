@@ -176,7 +176,7 @@ fn test_hmac_sha256(m: &[u8]) {
 
 fn main() {
     let bench = Bench::new();
-    let mut m = vec![0xd0u8; 16384];
+    let mut m = vec![0xd0u8; 65536];
 
     let options = &Options {
         iterations: 150_000,
