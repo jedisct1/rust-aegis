@@ -14,6 +14,8 @@ AEGIS is a new family of authenticated encryption algorithms, offering high secu
 
 # Benchmarks
 
+AEGIS is very fast on CPUs with parallel execution pipelines and AES support.
+
 Benchmarks can be reproduced using the `cargo bench` or `cargo-zigbuild bench` commands.
 
 ## Encryption (16 KB)
