@@ -176,7 +176,6 @@ fn test_hmac_sha256(m: &[u8]) {
 
 fn main() {
     let bench = Bench::new();
-    let mut m = vec![0xd0u8; 65536];
 
     let options = &Options {
         iterations: 150_000,
@@ -186,6 +185,8 @@ fn main() {
         max_rsd: 1.0,
         ..Default::default()
     };
+
+    let m = vec![0xd0u8; 65536];
 
     #[cfg(not(feature = "pure-rust"))]
     {
@@ -220,6 +221,8 @@ fn main() {
 
         println!();
     }
+
+    let mut m = vec![0xd0u8; 16384];
 
     println!("* Encryption:");
     println!();
