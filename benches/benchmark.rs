@@ -165,6 +165,14 @@ fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
     state.finalize();
 }
 
+fn test_hmac_sha256(m: &[u8]) {
+    let md = boring::hash::MessageDigest::sha256();
+    let mut h1 = boring::hash::hash(md, m).unwrap().to_vec();
+    h1.resize(128, 0);
+    let h2 = boring::hash::hash(md, &h1).unwrap().to_vec();
+    black_box(h2);
+}
+
 fn main() {
     let bench = Bench::new();
     let mut m = vec![0xd0u8; 16384];
@@ -198,6 +206,9 @@ fn main() {
         let sthash = sthash::Hasher::new(sthash::Key::from_seed(&[0u8; 32], None), None);
         let res = bench.run(options, || sthash.hash(&m));
         println!("sthash              : {}", res.throughput(m.len() as _));
+
+        let res = bench.run(options, || test_hmac_sha256(&m));
+        println!("hmac-sha256 (boring): {}", res.throughput(m.len() as _));
 
         let b3 = blake3::Hasher::new_keyed(&[0u8; 32]);
         let res = bench.run(options, || b3.clone().update(&m).finalize());
