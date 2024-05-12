@@ -179,10 +179,10 @@ fn main() {
     let mut m = vec![0xd0u8; 16384];
 
     let options = &Options {
-        iterations: 100_000,
+        iterations: 150_000,
         warmup_iterations: 1_000,
         min_samples: 5,
-        max_samples: 10,
+        max_samples: 15,
         max_rsd: 1.0,
         ..Default::default()
     };
