@@ -165,6 +165,7 @@ fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
     state.finalize();
 }
 
+#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 fn test_hmac_sha256(m: &[u8]) {
     let md = boring::hash::MessageDigest::sha256();
     let mut h1 = boring::hash::hash(md, m).unwrap().to_vec();
@@ -207,8 +208,11 @@ fn main() {
         let res = bench.run(options, || sthash.hash(&m));
         println!("sthash              : {}", res.throughput(m.len() as _));
 
-        let res = bench.run(options, || test_hmac_sha256(&m));
-        println!("hmac-sha256 (boring): {}", res.throughput(m.len() as _));
+        #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+        {
+            let res = bench.run(options, || test_hmac_sha256(&m));
+            println!("hmac-sha256 (boring): {}", res.throughput(m.len() as _));
+        }
 
         let b3 = blake3::Hasher::new_keyed(&[0u8; 32]);
         let res = bench.run(options, || b3.clone().update(&m).finalize());
