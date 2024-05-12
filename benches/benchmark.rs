@@ -22,7 +22,10 @@ use aegis::aegis256x2::Aegis256X2;
 )))]
 use aegis::aegis256x4::Aegis256X4;
 
-#[cfg(not(feature = "pure-rust"))]
+#[cfg(not(any(
+    feature = "pure-rust",
+    any(target_arch = "wasm32", target_arch = "wasm64")
+)))]
 use aegis::{aegis128l::Aegis128LMac, aegis128x2::Aegis128X2Mac, aegis128x4::Aegis128X4Mac};
 
 use aes_gcm::{
@@ -144,21 +147,30 @@ fn test_aegis256x4(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust"))]
+#[cfg(not(any(
+    feature = "pure-rust",
+    any(target_arch = "wasm32", target_arch = "wasm64")
+)))]
 fn test_aegis128l_mac(state: &Aegis128LMac<32>, m: &[u8]) {
     let mut state = state.clone();
     state.update(m);
     state.finalize();
 }
 
-#[cfg(not(feature = "pure-rust"))]
+#[cfg(not(any(
+    feature = "pure-rust",
+    any(target_arch = "wasm32", target_arch = "wasm64")
+)))]
 fn test_aegis128x2_mac(state: &Aegis128X2Mac<32>, m: &[u8]) {
     let mut state = state.clone();
     state.update(m);
     state.finalize();
 }
 
-#[cfg(not(feature = "pure-rust"))]
+#[cfg(not(any(
+    feature = "pure-rust",
+    any(target_arch = "wasm32", target_arch = "wasm64")
+)))]
 fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
     let mut state = state.clone();
     state.update(m);
@@ -186,10 +198,13 @@ fn main() {
         ..Default::default()
     };
 
-    let m = vec![0xd0u8; 65536];
-
-    #[cfg(not(feature = "pure-rust"))]
+    #[cfg(not(any(
+        feature = "pure-rust",
+        any(target_arch = "wasm32", target_arch = "wasm64")
+    )))]
     {
+        let m = vec![0xd0u8; 65536];
+
         println!("* MACs:");
         println!();
 

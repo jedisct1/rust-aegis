@@ -57,7 +57,7 @@ static INITIALIZED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicB
 #[cfg(not(feature = "std"))]
 static INITIALIZING: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
 
-/// Tag length in bits must be 128 or 256
+/// Tag length in bytes must be 16 (128 bits) or 32 (256 bits)
 #[derive(Copy, Clone, Debug)]
 pub struct Aegis128X2<const TAG_BYTES: usize> {
     key: Key,
@@ -215,6 +215,14 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
     }
 }
 
+/// AEGIS, used as a MAC, with support for incremental updates.
+///
+/// The state can be cloned to authenticate multiple messages with the same key.
+///
+/// 256-bit output tags are recommended for security.
+///
+/// Note that AEGIS is not a hash function. It is a MAC that requires a secret key.
+/// Inputs leading to a state collision can be efficiently computed if the key is known.
 #[derive(Debug)]
 pub struct Aegis128X2Mac<const TAG_BYTES: usize> {
     st: aegis128x2_state,
