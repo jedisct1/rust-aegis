@@ -223,18 +223,17 @@ impl<const TAG_BYTES: usize> Aegis128L<TAG_BYTES> {
 /// Note that AEGIS is not a hash function. It is a MAC that requires a secret key.
 /// Inputs leading to a state collision can be efficiently computed if the key is known.
 #[derive(Debug)]
+#[repr(align(32))]
 pub struct Aegis128LMac<const TAG_BYTES: usize> {
     st: aegis128l_state,
 }
 
 impl<const TAG_BYTES: usize> Clone for Aegis128LMac<TAG_BYTES> {
     fn clone(&self) -> Self {
-        let mut st = MaybeUninit::<aegis128l_state>::uninit();
+        let mut r = MaybeUninit::<Aegis128LMac<TAG_BYTES>>::uninit();
         unsafe {
-            aegis128l_mac_state_clone(st.as_mut_ptr(), &self.st);
-        }
-        Aegis128LMac {
-            st: unsafe { st.assume_init() },
+            aegis128l_mac_state_clone(r.as_mut_ptr() as *mut aegis128l_state, &self.st);
+            r.assume_init()
         }
     }
 }
@@ -274,12 +273,11 @@ impl<const TAG_BYTES: usize> Aegis128LMac<TAG_BYTES> {
             "Invalid tag length, must be 16 or 32"
         );
         Self::ensure_init();
-        let mut st = MaybeUninit::<aegis128l_state>::uninit();
+        let mut r: MaybeUninit<Aegis128LMac<TAG_BYTES>> =
+            MaybeUninit::<Aegis128LMac<TAG_BYTES>>::uninit();
         unsafe {
-            aegis128l_mac_init(st.as_mut_ptr(), key.as_ptr());
-        }
-        Aegis128LMac {
-            st: unsafe { st.assume_init() },
+            aegis128l_mac_init(r.as_mut_ptr() as *mut aegis128l_state, key.as_ptr());
+            r.assume_init()
         }
     }
 

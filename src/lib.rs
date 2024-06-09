@@ -46,6 +46,8 @@ impl std::error::Error for Error {}
 #[cfg(test)]
 mod tests {
     use crate::aegis128l::Aegis128L;
+    #[cfg(feature = "std")]
+    use crate::aegis128l::Aegis128LMac;
     use crate::aegis256::Aegis256;
 
     #[test]
@@ -148,5 +150,19 @@ mod tests {
             .decrypt(&c, &tag, ad)
             .unwrap();
         assert_eq!(m2, m);
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_aegis128l_mac() {
+        let s: Aegis128LMac<16> = Aegis128LMac::new(&[0; 16]);
+        let c = s.clone().finalize();
+
+        let expected_c = [
+            0x83, 0xCC, 0x60, 0x0D, 0xC4, 0xE3, 0xE7, 0xE6, 0x2D, 0x40, 0x55, 0x82, 0x61, 0x74,
+            0xF1, 0x49,
+        ];
+
+        assert_eq!(c, expected_c);
     }
 }
