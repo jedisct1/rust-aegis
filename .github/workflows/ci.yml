@@ -1,0 +1,36 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Build
+      run: cargo build
+    - name: Run tests
+      run: cargo test
+    - name: Build pure-rust
+      run: cargo build --features=pure-rust
+    - name: Run pure-rust tests
+      run: cargo test --features=pure-rust
+    - name: Build no-std
+      run: cargo build --no-default-features
+    - name: Run no-std tests
+      run: cargo test --no-default-features
+    - name: Build pure-rust no-std
+      run: cargo build --no-default-features --features=pure-rust
+    - name: Run pure-rust no-std tests
+      run: cargo test --no-default-features --features=pure-rust
