@@ -45,12 +45,12 @@ impl std::error::Error for Error {}
 
 #[cfg(test)]
 mod tests {
-    use crate::aegis128l::Aegis128L;
-    use crate::aegis256::Aegis256;
 
     #[test]
     #[cfg(feature = "std")]
     fn test_aegis() {
+        use crate::aegis128l::Aegis128L;
+
         let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
         let ad = b"Comment numero un";
         let key = b"YELLOW SUBMARINE";
@@ -80,6 +80,8 @@ mod tests {
 
     #[test]
     fn test_aegis_in_place() {
+        use crate::aegis128l::Aegis128L;
+
         let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
         let ad = b"Comment numero un";
         let key = b"YELLOW SUBMARINE";
@@ -108,8 +110,11 @@ mod tests {
         assert_eq!(mc, m);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_aegis_tag256() {
+        use crate::aegis128l::Aegis128L;
+
         let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
         let ad = b"Comment numero un";
         let key = b"YELLOW SUBMARINE";
@@ -122,8 +127,11 @@ mod tests {
         assert_eq!(m2, m);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_aegis256() {
+        use crate::aegis256::Aegis256;
+
         let m = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
         let ad = b"Comment numero un";
         let key = b"YELLOW SUBMARINEyellow submarine";

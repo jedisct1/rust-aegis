@@ -13,7 +13,7 @@ pub type Nonce = [u8; 32];
 #[repr(align(64))]
 #[derive(Debug)]
 struct aegis256x4_state {
-    opaque: [u8; 576usize],
+    opaque: [u8; 576],
 }
 
 extern "C" {
