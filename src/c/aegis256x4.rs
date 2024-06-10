@@ -9,7 +9,12 @@ pub type Key = [u8; 32];
 pub type Nonce = [u8; 32];
 
 #[allow(non_camel_case_types)]
-type aegis256x4_state = [u8; 576];
+#[repr(C)]
+#[repr(align(64))]
+#[derive(Debug)]
+struct aegis256x4_state {
+    opaque: [u8; 576usize],
+}
 
 extern "C" {
     fn aegis_init() -> c_int;
