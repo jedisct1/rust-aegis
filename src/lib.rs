@@ -158,6 +158,7 @@ mod tests {
         assert_eq!(m2, m);
     }
 
+    #[cfg(not(feature = "pure-rust"))]
     #[test]
     fn test_aegis128l_mac() {
         use crate::aegis128l::Aegis128LMac;
