@@ -1,16 +1,16 @@
 use aegis::aegis128l::Aegis128L;
 use aegis::aegis256::Aegis256;
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 use aegis::aegis128x2::Aegis128X2;
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 use aegis::aegis128x4::Aegis128X4;
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 use aegis::aegis256x2::Aegis256X2;
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 use aegis::aegis256x4::Aegis256X4;
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 use aegis::{aegis128l::Aegis128LMac, aegis128x2::Aegis128X2Mac, aegis128x4::Aegis128X4Mac};
 
 use aes_gcm::{
@@ -81,7 +81,7 @@ fn test_aegis128l(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x2(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
@@ -89,7 +89,7 @@ fn test_aegis128x2(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x4(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
@@ -104,7 +104,7 @@ fn test_aegis256(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 fn test_aegis256x2(m: &mut [u8]) {
     let key = [0u8; 32];
     let nonce = [0u8; 32];
@@ -120,21 +120,21 @@ fn test_aegis256x4(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 fn test_aegis128l_mac(state: &Aegis128LMac<32>, m: &[u8]) {
     let mut state = state.clone();
     state.update(m);
     state.finalize();
 }
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x2_mac(state: &Aegis128X2Mac<32>, m: &[u8]) {
     let mut state = state.clone();
     state.update(m);
     state.finalize();
 }
 
-#[cfg(not(feature = "pure-rust",))]
+#[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
     let mut state = state.clone();
     state.update(m);
@@ -162,7 +162,7 @@ fn main() {
         ..Default::default()
     };
 
-    #[cfg(not(feature = "pure-rust",))]
+    #[cfg(not(feature = "pure-rust"))]
     {
         let m = vec![0xd0u8; 65536];
 
@@ -215,7 +215,7 @@ fn main() {
     let res = bench.run(options, || test_aegis128l(&mut m));
     println!("aegis128l           : {}", res.throughput(m.len() as _));
 
-    #[cfg(not(feature = "pure-rust",))]
+    #[cfg(not(feature = "pure-rust"))]
     {
         let res = bench.run(options, || test_aegis256x2(&mut m));
         println!("aegis256x2          : {}", res.throughput(m.len() as _));
