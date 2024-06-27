@@ -4,26 +4,14 @@
 #[cfg(feature = "std")]
 use std::fmt;
 
-#[cfg(any(
-    feature = "pure-rust",
-    not(any(target_arch = "x86_64", target_arch = "aarch64"))
-))]
+#[cfg(feature = "pure-rust")]
 mod pure_rust;
-#[cfg(any(
-    feature = "pure-rust",
-    not(any(target_arch = "x86_64", target_arch = "aarch64"))
-))]
+#[cfg(feature = "pure-rust")]
 pub use pure_rust::*;
 
-#[cfg(not(any(
-    feature = "pure-rust",
-    not(any(target_arch = "x86_64", target_arch = "aarch64"))
-)))]
+#[cfg(not(feature = "pure-rust"))]
 mod c;
-#[cfg(not(any(
-    feature = "pure-rust",
-    not(any(target_arch = "x86_64", target_arch = "aarch64"))
-)))]
+#[cfg(not(feature = "pure-rust"))]
 pub use c::*;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
