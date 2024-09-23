@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "0.6.6"
+version = "0.6.7"
 edition = "2018"
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "AEGIS authenticated ciphers (AEGIS-128, AEGIS-256, AEGIS-128X, AEGIS-256X)"
@@ -15,7 +15,7 @@ readme = "README.md"
 version = "0.1"
 
 [build-dependencies]
-cc = "1.0.101"
+cc = "1.1.21"
 
 [dev-dependencies]
 benchmark-simple = "0.1.9"
@@ -23,13 +23,13 @@ ascon-aead = "0.4.2"
 aes-gcm = "0.10.3"
 chacha20poly1305 = "0.10.1"
 sthash = "0.2.15"
-blake3 = "1.5.1"
+blake3 = "1.5.4"
 
 [dependencies]
 aead = { optional = true, version = "0.6.0-rc.0", features = ["rand_core"] }
 
 [target."cfg(not(any(target_arch = \"wasm32\", target_arch = \"wasm64\")))".dev-dependencies.boring]
-version = "4.7.0"
+version = "4.10.3"
 
 [[bench]]
 name = "benchmark"
