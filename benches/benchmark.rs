@@ -171,29 +171,47 @@ fn main() {
 
         let state = Aegis128X4Mac::<32>::new(&[0u8; 16]);
         let res = bench.run(options, || test_aegis128x4_mac(&state, &m));
-        println!("aegis128x4-mac      : {}", res.throughput(m.len() as _));
+        println!(
+            "aegis128x4-mac      : {}",
+            res.throughput_bits(m.len() as _)
+        );
 
         let state = Aegis128X2Mac::<32>::new(&[0u8; 16]);
         let res = bench.run(options, || test_aegis128x2_mac(&state, &m));
-        println!("aegis128x2-mac      : {}", res.throughput(m.len() as _));
+        println!(
+            "aegis128x2-mac      : {}",
+            res.throughput_bits(m.len() as _)
+        );
 
         let state = Aegis128LMac::<32>::new(&[0u8; 16]);
         let res = bench.run(options, || test_aegis128l_mac(&state, &m));
-        println!("aegis128l-mac       : {}", res.throughput(m.len() as _));
+        println!(
+            "aegis128l-mac       : {}",
+            res.throughput_bits(m.len() as _)
+        );
 
         let sthash = sthash::Hasher::new(sthash::Key::from_seed(&[0u8; 32], None), None);
         let res = bench.run(options, || sthash.hash(&m));
-        println!("sthash              : {}", res.throughput(m.len() as _));
+        println!(
+            "sthash              : {}",
+            res.throughput_bits(m.len() as _)
+        );
 
         #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
         {
             let res = bench.run(options, || test_hmac_sha256(&m));
-            println!("hmac-sha256 (boring): {}", res.throughput(m.len() as _));
+            println!(
+                "hmac-sha256 (boring): {}",
+                res.throughput_bits(m.len() as _)
+            );
         }
 
         let b3 = blake3::Hasher::new_keyed(&[0u8; 32]);
         let res = bench.run(options, || b3.clone().update(&m).finalize());
-        println!("blake3              : {}", res.throughput(m.len() as _));
+        println!(
+            "blake3              : {}",
+            res.throughput_bits(m.len() as _)
+        );
 
         println!();
     }
@@ -206,48 +224,84 @@ fn main() {
     #[cfg(not(feature = "pure-rust"))]
     {
         let res = bench.run(options, || test_aegis128x4(&mut m));
-        println!("aegis128x4          : {}", res.throughput(m.len() as _));
+        println!(
+            "aegis128x4          : {}",
+            res.throughput_bits(m.len() as _)
+        );
 
         let res = bench.run(options, || test_aegis128x2(&mut m));
-        println!("aegis128x2          : {}", res.throughput(m.len() as _));
+        println!(
+            "aegis128x2          : {}",
+            res.throughput_bits(m.len() as _)
+        );
     }
 
     let res = bench.run(options, || test_aegis128l(&mut m));
-    println!("aegis128l           : {}", res.throughput(m.len() as _));
+    println!(
+        "aegis128l           : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     #[cfg(not(feature = "pure-rust"))]
     {
         let res = bench.run(options, || test_aegis256x2(&mut m));
-        println!("aegis256x2          : {}", res.throughput(m.len() as _));
+        println!(
+            "aegis256x2          : {}",
+            res.throughput_bits(m.len() as _)
+        );
 
         let res = bench.run(options, || test_aegis256x4(&mut m));
-        println!("aegis256x4          : {}", res.throughput(m.len() as _));
+        println!(
+            "aegis256x4          : {}",
+            res.throughput_bits(m.len() as _)
+        );
     }
 
     let res = bench.run(options, || test_aegis256(&mut m));
-    println!("aegis256            : {}", res.throughput(m.len() as _));
+    println!(
+        "aegis256            : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     let res = bench.run(options, || test_aes128gcm(&mut m));
-    println!("aes128-gcm (aes-gcm): {}", res.throughput(m.len() as _));
+    println!(
+        "aes128-gcm (aes-gcm): {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
     {
         let res = bench.run(options, || test_aes128gcm_boringssl(&mut m));
-        println!("aes128-gcm (boring) : {}", res.throughput(m.len() as _));
+        println!(
+            "aes128-gcm (boring) : {}",
+            res.throughput_bits(m.len() as _)
+        );
     }
 
     let res = bench.run(options, || test_aes256gcm(&mut m));
-    println!("aes256-gcm (aes-gcm): {}", res.throughput(m.len() as _));
+    println!(
+        "aes256-gcm (aes-gcm): {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
     {
         let res = bench.run(options, || test_aes256gcm_boringssl(&mut m));
-        println!("aes256-gcm (boring) : {}", res.throughput(m.len() as _));
+        println!(
+            "aes256-gcm (boring) : {}",
+            res.throughput_bits(m.len() as _)
+        );
     }
 
     let res = bench.run(options, || test_chacha20poly1305(&mut m));
-    println!("chacha20-poly1305   : {}", res.throughput(m.len() as _));
+    println!(
+        "chacha20-poly1305   : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     let res = bench.run(options, || test_ascon128a(&mut m));
-    println!("ascon128a           : {}", res.throughput(m.len() as _));
+    println!(
+        "ascon128a           : {}",
+        res.throughput_bits(m.len() as _)
+    );
 }
