@@ -29,3 +29,7 @@ For performance, `clang` is recommended over `gcc`.
 ## Authentication (64 KB)
 
 ![AEGIS-MAC benchmark results](img/bench-mac.png)
+
+### Mobile benchmarks
+
+![AEGIS mobile benchmark results](img/bench-mobile.png)
