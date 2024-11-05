@@ -154,7 +154,7 @@ fn main() {
     let bench = Bench::new();
 
     let options = &Options {
-        iterations: 150_000,
+        iterations: 250_000,
         warmup_iterations: 1_000,
         min_samples: 5,
         max_samples: 15,
