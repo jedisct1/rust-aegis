@@ -11,7 +11,7 @@ use aegis::aegis256x2::Aegis256X2;
 use aegis::aegis256x4::Aegis256X4;
 
 #[cfg(not(feature = "pure-rust"))]
-use aegis::{aegis128l::Aegis128LMac, aegis128x2::Aegis128X2Mac, aegis128x4::Aegis128X4Mac};
+use aegis::aegis128l::Aegis128LMac;
 
 use aes_gcm::{
     aead::{AeadInPlace as _, KeyInit as _},
@@ -127,20 +127,6 @@ fn test_aegis128l_mac(state: &Aegis128LMac<32>, m: &[u8]) {
     state.finalize();
 }
 
-#[cfg(not(feature = "pure-rust"))]
-fn test_aegis128x2_mac(state: &Aegis128X2Mac<32>, m: &[u8]) {
-    let mut state = state.clone();
-    state.update(m);
-    state.finalize();
-}
-
-#[cfg(not(feature = "pure-rust"))]
-fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
-    let mut state = state.clone();
-    state.update(m);
-    state.finalize();
-}
-
 #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 fn test_hmac_sha256(m: &[u8]) {
     let md = boring::hash::MessageDigest::sha256();
@@ -169,21 +155,7 @@ fn main() {
         println!("* MACs:");
         println!();
 
-        let state = Aegis128X4Mac::<32>::new(&[0u8; 16]);
-        let res = bench.run(options, || test_aegis128x4_mac(&state, &m));
-        println!(
-            "aegis128x4-mac      : {}",
-            res.throughput_bits(m.len() as _)
-        );
-
-        let state = Aegis128X2Mac::<32>::new(&[0u8; 16]);
-        let res = bench.run(options, || test_aegis128x2_mac(&state, &m));
-        println!(
-            "aegis128x2-mac      : {}",
-            res.throughput_bits(m.len() as _)
-        );
-
-        let state = Aegis128LMac::<32>::new(&[0u8; 16]);
+        let state = Aegis128LMac::<32>::new(&[0u8; 16], &[0u8; 16]);
         let res = bench.run(options, || test_aegis128l_mac(&state, &m));
         println!(
             "aegis128l-mac       : {}",

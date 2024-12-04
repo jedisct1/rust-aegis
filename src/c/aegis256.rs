@@ -43,7 +43,7 @@ extern "C" {
         k: *const u8,
     ) -> c_int;
 
-    fn aegis256_mac_init(st_: *mut aegis256_state, k: *const u8);
+    fn aegis256_mac_init(st_: *mut aegis256_state, k: *const u8, npub: *const u8);
 
     fn aegis256_mac_update(st_: *mut aegis256_state, m: *const u8, mlen: usize) -> c_int;
 
@@ -273,7 +273,7 @@ impl<const TAG_BYTES: usize> Aegis256Mac<TAG_BYTES> {
     /// Initializes the MAC state with a key.
     ///
     /// The state can be cloned to authenticate multiple messages with the same key.
-    pub fn new(key: &Key) -> Self {
+    pub fn new(key: &Key, nonce: &Nonce) -> Self {
         assert!(
             TAG_BYTES == 16 || TAG_BYTES == 32,
             "Invalid in bytes must be 16 (128 bits) or 32 (256 bits)gth, must be 16 or 32"
@@ -281,7 +281,7 @@ impl<const TAG_BYTES: usize> Aegis256Mac<TAG_BYTES> {
         Self::ensure_init();
         let mut st = MaybeUninit::<aegis256_state>::uninit();
         unsafe {
-            aegis256_mac_init(st.as_mut_ptr(), key.as_ptr());
+            aegis256_mac_init(st.as_mut_ptr(), key.as_ptr(), nonce.as_ptr());
         }
         Aegis256Mac {
             st: unsafe { st.assume_init() },
