@@ -157,7 +157,7 @@ mod tests {
         let mut st: Aegis128LMac<16> = Aegis128LMac::new(key);
         let mut st2 = st.clone();
         let expected_mac: [u8; 16] = [
-            76, 47, 241, 40, 153, 182, 236, 199, 34, 12, 236, 15, 210, 193, 95, 189,
+            123, 30, 49, 201, 62, 248, 169, 183, 13, 58, 122, 174, 41, 128, 214, 160,
         ];
         st.update(b"a");
         st.verify(&expected_mac).unwrap();

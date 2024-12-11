@@ -8,12 +8,20 @@ pub type Key = [u8; 32];
 /// AEGIS-256X4 nonce
 pub type Nonce = [u8; 32];
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, dead_code)]
 #[repr(C)]
 #[repr(align(64))]
 #[derive(Debug)]
 struct aegis256x4_state {
     opaque: [u8; 576],
+}
+
+#[allow(non_camel_case_types)]
+#[repr(C)]
+#[repr(align(64))]
+#[derive(Debug)]
+struct aegis256x4_mac_state {
+    opaque: [u8; 960],
 }
 
 extern "C" {
@@ -43,15 +51,21 @@ extern "C" {
         k: *const u8,
     ) -> c_int;
 
-    fn aegis256x4_mac_init(st_: *mut aegis256x4_state, k: *const u8);
+    fn aegis256x4_mac_init(st_: *mut aegis256x4_mac_state, k: *const u8, npub: *const u8);
 
-    fn aegis256x4_mac_update(st_: *mut aegis256x4_state, m: *const u8, mlen: usize) -> c_int;
+    fn aegis256x4_mac_update(st_: *mut aegis256x4_mac_state, m: *const u8, mlen: usize) -> c_int;
 
-    fn aegis256x4_mac_final(st_: *mut aegis256x4_state, mac: *mut u8, maclen: usize) -> c_int;
+    fn aegis256x4_mac_final(st_: *mut aegis256x4_mac_state, mac: *mut u8, maclen: usize) -> c_int;
 
-    fn aegis256x4_mac_verify(st_: *mut aegis256x4_state, mac: *const u8, maclen: usize) -> c_int;
+    fn aegis256x4_mac_verify(
+        st_: *mut aegis256x4_mac_state,
+        mac: *const u8,
+        maclen: usize,
+    ) -> c_int;
 
-    fn aegis256x4_mac_state_clone(dst: *mut aegis256x4_state, src: *const aegis256x4_state);
+    fn aegis256x4_mac_reset(st_: *mut aegis256x4_mac_state);
+
+    fn aegis256x4_mac_state_clone(dst: *mut aegis256x4_mac_state, src: *const aegis256x4_mac_state);
 }
 
 #[cfg(feature = "std")]
@@ -229,12 +243,12 @@ impl<const TAG_BYTES: usize> Aegis256X4<TAG_BYTES> {
 /// Inputs leading to a state collision can be efficiently computed if the key is known.
 #[derive(Debug)]
 pub struct Aegis256X4Mac<const TAG_BYTES: usize> {
-    st: aegis256x4_state,
+    st: aegis256x4_mac_state,
 }
 
 impl<const TAG_BYTES: usize> Clone for Aegis256X4Mac<TAG_BYTES> {
     fn clone(&self) -> Self {
-        let mut st = MaybeUninit::<aegis256x4_state>::uninit();
+        let mut st = MaybeUninit::<aegis256x4_mac_state>::uninit();
         unsafe {
             aegis256x4_mac_state_clone(st.as_mut_ptr(), &self.st);
         }
@@ -279,9 +293,27 @@ impl<const TAG_BYTES: usize> Aegis256X4Mac<TAG_BYTES> {
             "Invalid in bytes must be 16 (128 bits) or 32 (256 bits)gth, must be 16 or 32"
         );
         Self::ensure_init();
-        let mut st = MaybeUninit::<aegis256x4_state>::uninit();
+        let mut st = MaybeUninit::<aegis256x4_mac_state>::uninit();
         unsafe {
-            aegis256x4_mac_init(st.as_mut_ptr(), key.as_ptr());
+            aegis256x4_mac_init(st.as_mut_ptr(), key.as_ptr(), [0u8; 32].as_ptr());
+        }
+        Aegis256X4Mac {
+            st: unsafe { st.assume_init() },
+        }
+    }
+
+    /// Initializes the MAC state with a key and a nonce.
+    ///
+    /// The state can be cloned to authenticate multiple messages with the same key.
+    pub fn new_with_nonce(key: &Key, npub: &Nonce) -> Self {
+        assert!(
+            TAG_BYTES == 16 || TAG_BYTES == 32,
+            "Invalid in bytes must be 16 (128 bits) or 32 (256 bits)gth, must be 16 or 32"
+        );
+        Self::ensure_init();
+        let mut st = MaybeUninit::<aegis256x4_mac_state>::uninit();
+        unsafe {
+            aegis256x4_mac_init(st.as_mut_ptr(), key.as_ptr(), npub.as_ptr());
         }
         Aegis256X4Mac {
             st: unsafe { st.assume_init() },
@@ -306,6 +338,16 @@ impl<const TAG_BYTES: usize> Aegis256X4Mac<TAG_BYTES> {
         tag
     }
 
+    /// Finalizes the MAC, resets the state for reuse, and returns the authentication tag
+    pub fn finalize_and_reset(&mut self) -> Tag<TAG_BYTES> {
+        let mut tag = [0u8; TAG_BYTES];
+        unsafe {
+            aegis256x4_mac_final(&mut self.st, tag.as_mut_ptr(), TAG_BYTES);
+            aegis256x4_mac_reset(&mut self.st);
+        }
+        tag
+    }
+
     /// Verifies the authentication tag
     pub fn verify(mut self, tag: &Tag<TAG_BYTES>) -> Result<(), Error> {
         let res = unsafe { aegis256x4_mac_verify(&mut self.st, tag.as_ptr(), TAG_BYTES) };
@@ -313,5 +355,12 @@ impl<const TAG_BYTES: usize> Aegis256X4Mac<TAG_BYTES> {
             return Err(Error::InvalidTag);
         }
         Ok(())
+    }
+
+    /// Resets the MAC state
+    pub fn reset(&mut self) {
+        unsafe {
+            aegis256x4_mac_reset(&mut self.st);
+        }
     }
 }
