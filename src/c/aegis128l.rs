@@ -43,7 +43,7 @@ extern "C" {
         k: *const u8,
     ) -> c_int;
 
-    fn aegis128l_mac_init(st_: *mut aegis128l_state, k: *const u8, npub: *const u8);
+    fn aegis128l_mac_init(st_: *mut aegis128l_state, k: *const u8);
 
     fn aegis128l_mac_update(st_: *mut aegis128l_state, m: *const u8, mlen: usize) -> c_int;
 
@@ -273,7 +273,7 @@ impl<const TAG_BYTES: usize> Aegis128LMac<TAG_BYTES> {
     /// Initializes the MAC state with a key.
     ///
     /// The state can be cloned to authenticate multiple messages with the same key.
-    pub fn new(key: &Key, nonce: &Nonce) -> Self {
+    pub fn new(key: &Key) -> Self {
         assert!(
             TAG_BYTES == 16 || TAG_BYTES == 32,
             "Invalid tag length, must be 16 or 32"
@@ -281,7 +281,7 @@ impl<const TAG_BYTES: usize> Aegis128LMac<TAG_BYTES> {
         Self::ensure_init();
         let mut st = MaybeUninit::<aegis128l_state>::uninit();
         unsafe {
-            aegis128l_mac_init(st.as_mut_ptr(), key.as_ptr(), nonce.as_ptr());
+            aegis128l_mac_init(st.as_mut_ptr(), key.as_ptr());
         }
         Aegis128LMac {
             st: unsafe { st.assume_init() },

@@ -154,8 +154,7 @@ mod tests {
         use crate::aegis128l::Aegis128LMac;
 
         let key = b"YELLOW SUBMARINE";
-        let nonce = &[0u8; 16];
-        let mut st: Aegis128LMac<16> = Aegis128LMac::new(key, nonce);
+        let mut st: Aegis128LMac<16> = Aegis128LMac::new(key);
         let mut st2 = st.clone();
         let expected_mac: [u8; 16] = [
             76, 47, 241, 40, 153, 182, 236, 199, 34, 12, 236, 15, 210, 193, 95, 189,
