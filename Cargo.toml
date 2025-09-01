@@ -15,7 +15,7 @@ readme = "README.md"
 version = "0.1"
 
 [build-dependencies]
-cc = "1.2.14"
+cc = "1.2.3"
 
 [dev-dependencies]
 benchmark-simple = "0.1.10"
