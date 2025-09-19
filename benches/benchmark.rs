@@ -68,7 +68,7 @@ fn test_chacha20poly1305(m: &mut [u8]) {
 fn test_ascon128a(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
-    let state = ascon_aead::Ascon128a::new(key.as_slice().into());
+    let state = ascon_aead::AsconAead128::new(key.as_slice().into());
     state
         .encrypt_in_place_detached(nonce.as_slice().into(), &[], m)
         .unwrap();
