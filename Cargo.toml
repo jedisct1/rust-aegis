@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2018"
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "AEGIS authenticated ciphers (AEGIS-128, AEGIS-256, AEGIS-128X, AEGIS-256X)"
