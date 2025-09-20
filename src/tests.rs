@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod test_vectors {
     use ct_codecs::{Decoder, Hex};
     use serde_json::Value;

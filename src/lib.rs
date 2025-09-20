@@ -72,6 +72,7 @@ mod basic_tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_aegis_in_place() {
         use crate::aegis128l::Aegis128L;
 
