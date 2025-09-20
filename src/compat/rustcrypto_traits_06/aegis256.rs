@@ -35,11 +35,9 @@ impl AeadInOut for Aegis256<16> {
         &self,
         nonce: &Nonce<Self>,
         associated_data: &[u8],
-        mut buffer: InOutBuf<'_, '_, u8>,
+        buffer: InOutBuf<'_, '_, u8>,
     ) -> Result<Tag<Self>> {
-        let input = buffer.get_in().to_vec();
-        let output = buffer.get_out();
-        output.copy_from_slice(&input);
+        let output = buffer.into_out_with_copied_in();
         let state = aegis256::Aegis256::<16>::new(self.key.as_ref(), nonce.as_ref());
         let tag = state.encrypt_in_place(output, associated_data);
         Ok(tag.into())
@@ -49,12 +47,10 @@ impl AeadInOut for Aegis256<16> {
         &self,
         nonce: &Nonce<Self>,
         associated_data: &[u8],
-        mut buffer: InOutBuf<'_, '_, u8>,
+        buffer: InOutBuf<'_, '_, u8>,
         tag: &Tag<Self>,
     ) -> Result<()> {
-        let input = buffer.get_in().to_vec();
-        let output = buffer.get_out();
-        output.copy_from_slice(&input);
+        let output = buffer.into_out_with_copied_in();
         let state = aegis256::Aegis256::<16>::new(self.key.as_ref(), nonce.as_ref());
         state
             .decrypt_in_place(output, tag.as_ref(), associated_data)
@@ -67,11 +63,9 @@ impl AeadInOut for Aegis256<32> {
         &self,
         nonce: &Nonce<Self>,
         associated_data: &[u8],
-        mut buffer: InOutBuf<'_, '_, u8>,
+        buffer: InOutBuf<'_, '_, u8>,
     ) -> Result<Tag<Self>> {
-        let input = buffer.get_in().to_vec();
-        let output = buffer.get_out();
-        output.copy_from_slice(&input);
+        let output = buffer.into_out_with_copied_in();
         let state = aegis256::Aegis256::<32>::new(self.key.as_ref(), nonce.as_ref());
         let tag = state.encrypt_in_place(output, associated_data);
         Ok(tag.into())
@@ -81,12 +75,10 @@ impl AeadInOut for Aegis256<32> {
         &self,
         nonce: &Nonce<Self>,
         associated_data: &[u8],
-        mut buffer: InOutBuf<'_, '_, u8>,
+        buffer: InOutBuf<'_, '_, u8>,
         tag: &Tag<Self>,
     ) -> Result<()> {
-        let input = buffer.get_in().to_vec();
-        let output = buffer.get_out();
-        output.copy_from_slice(&input);
+        let output = buffer.into_out_with_copied_in();
         let state = aegis256::Aegis256::<32>::new(self.key.as_ref(), nonce.as_ref());
         state
             .decrypt_in_place(output, tag.as_ref(), associated_data)
