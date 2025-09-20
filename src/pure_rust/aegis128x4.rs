@@ -13,25 +13,27 @@ const D: usize = 4; // Degree of parallelism for AEGIS-128X4
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy)]
 struct State {
-    // We maintain D parallel AEGIS-128L states, each with 8 AES blocks
-    blocks: [[AesBlock; 8]; D],
+    // We maintain 8 AES blocks, each with D parallel states
+    blocks: [[AesBlock; D]; 8],
 }
 
 impl State {
     fn update(&mut self, d: [[AesBlock; 2]; D]) {
         // Update all D states in parallel
+        let mut tmp = [AesBlock::from_bytes(&[0u8; 16]); D];
         for i in 0..D {
-            let blocks = &mut self.blocks[i];
-            let tmp = blocks[7];
+            tmp[i] = self.blocks[7][i];
+        }
 
-            blocks[7] = blocks[6].round(blocks[7]);
-            blocks[6] = blocks[5].round(blocks[6]);
-            blocks[5] = blocks[4].round(blocks[5]);
-            blocks[4] = blocks[3].round(blocks[4]).xor(d[i][1]);
-            blocks[3] = blocks[2].round(blocks[3]);
-            blocks[2] = blocks[1].round(blocks[2]);
-            blocks[1] = blocks[0].round(blocks[1]);
-            blocks[0] = tmp.round(blocks[0]).xor(d[i][0]);
+        for i in 0..D {
+            self.blocks[7][i] = self.blocks[6][i].round(self.blocks[7][i]);
+            self.blocks[6][i] = self.blocks[5][i].round(self.blocks[6][i]);
+            self.blocks[5][i] = self.blocks[4][i].round(self.blocks[5][i]);
+            self.blocks[4][i] = self.blocks[3][i].round(self.blocks[4][i]).xor(d[i][1]);
+            self.blocks[3][i] = self.blocks[2][i].round(self.blocks[3][i]);
+            self.blocks[2][i] = self.blocks[1][i].round(self.blocks[2][i]);
+            self.blocks[1][i] = self.blocks[0][i].round(self.blocks[1][i]);
+            self.blocks[0][i] = tmp[i].round(self.blocks[0][i]).xor(d[i][0]);
         }
     }
 
@@ -49,19 +51,17 @@ impl State {
         let nonce_block = AesBlock::from_bytes(nonce);
 
         // Initialize D AEGIS-128L states
-        let mut blocks = [[AesBlock::from_bytes(&[0u8; 16]); 8]; D];
+        let mut blocks = [[AesBlock::from_bytes(&[0u8; 16]); D]; 8];
 
         for i in 0..D {
-            blocks[i] = [
-                key_block.xor(nonce_block),
-                c1,
-                c0,
-                c1,
-                key_block.xor(nonce_block),
-                key_block.xor(c0),
-                key_block.xor(c1),
-                key_block.xor(c0),
-            ];
+            blocks[0][i] = key_block.xor(nonce_block);
+            blocks[1][i] = c1;
+            blocks[2][i] = c0;
+            blocks[3][i] = c1;
+            blocks[4][i] = key_block.xor(nonce_block);
+            blocks[5][i] = key_block.xor(c0);
+            blocks[6][i] = key_block.xor(c1);
+            blocks[7][i] = key_block.xor(c0);
         }
 
         let mut state = State { blocks };
@@ -79,8 +79,8 @@ impl State {
         for _ in 0..10 {
             // Add context to states
             for i in 0..D {
-                state.blocks[i][3] = state.blocks[i][3].xor(ctx[i]);
-                state.blocks[i][7] = state.blocks[i][7].xor(ctx[i]);
+                state.blocks[3][i] = state.blocks[3][i].xor(ctx[i]);
+                state.blocks[7][i] = state.blocks[7][i].xor(ctx[i]);
             }
 
             // Update with nonce and key for each state
@@ -110,9 +110,12 @@ impl State {
 
     fn enc(&mut self, dst: &mut [u8; 32 * D], src: &[u8; 32 * D]) {
         for i in 0..D {
-            let blocks = &self.blocks[i];
-            let z0 = blocks[6].xor(blocks[1]).xor(blocks[2].and(blocks[3]));
-            let z1 = blocks[2].xor(blocks[5]).xor(blocks[6].and(blocks[7]));
+            let z0 = self.blocks[6][i]
+                .xor(self.blocks[1][i])
+                .xor(self.blocks[2][i].and(self.blocks[3][i]));
+            let z1 = self.blocks[2][i]
+                .xor(self.blocks[5][i])
+                .xor(self.blocks[6][i].and(self.blocks[7][i]));
 
             // Read from correct positions: M0 split, then M1 split
             let msg0 = AesBlock::from_bytes(&src[i * 16..i * 16 + 16]); // M0 split
@@ -133,9 +136,12 @@ impl State {
         let mut msg = [[AesBlock::from_bytes(&[0u8; 16]); 2]; D];
 
         for i in 0..D {
-            let blocks = &self.blocks[i];
-            let z0 = blocks[6].xor(blocks[1]).xor(blocks[2].and(blocks[3]));
-            let z1 = blocks[2].xor(blocks[5]).xor(blocks[6].and(blocks[7]));
+            let z0 = self.blocks[6][i]
+                .xor(self.blocks[1][i])
+                .xor(self.blocks[2][i].and(self.blocks[3][i]));
+            let z1 = self.blocks[2][i]
+                .xor(self.blocks[5][i])
+                .xor(self.blocks[6][i].and(self.blocks[7][i]));
 
             // Read from correct positions: M0 split, then M1 split
             msg[i][0] = AesBlock::from_bytes(&src[i * 16..i * 16 + 16]).xor(z0); // M0 split
@@ -158,9 +164,12 @@ impl State {
         let mut z1_bytes = [0u8; 64]; // 128 * D bits = 64 bytes for D=4
 
         for i in 0..D {
-            let blocks = &self.blocks[i];
-            let z0_i = blocks[6].xor(blocks[1]).xor(blocks[2].and(blocks[3]));
-            let z1_i = blocks[2].xor(blocks[5]).xor(blocks[6].and(blocks[7]));
+            let z0_i = self.blocks[6][i]
+                .xor(self.blocks[1][i])
+                .xor(self.blocks[2][i].and(self.blocks[3][i]));
+            let z1_i = self.blocks[2][i]
+                .xor(self.blocks[5][i])
+                .xor(self.blocks[6][i].and(self.blocks[7][i]));
 
             z0_bytes[i * 16..i * 16 + 16].copy_from_slice(&z0_i.to_bytes());
             z1_bytes[i * 16..i * 16 + 16].copy_from_slice(&z1_i.to_bytes());
@@ -218,8 +227,8 @@ impl State {
         // Construct t vector: for i in 0..D: t = t || (V[2,i] ^ u)
         let mut t_data = [[AesBlock::from_bytes(&[0u8; 16]); 2]; D];
         for i in 0..D {
-            t_data[i][0] = self.blocks[i][2].xor(u); // V[2,i] ^ u
-            t_data[i][1] = self.blocks[i][2].xor(u); // V[2,i] ^ u for both M0 and M1
+            t_data[i][0] = self.blocks[2][i].xor(u); // V[2,i] ^ u
+            t_data[i][1] = self.blocks[2][i].xor(u); // V[2,i] ^ u for both M0 and M1
         }
 
         // Repeat(7, Update(t, t)) - Update all D states simultaneously
@@ -233,13 +242,13 @@ impl State {
 
             for i in 0..D {
                 // ti = V[0,i] ^ V[1,i] ^ V[2,i] ^ V[3,i] ^ V[4,i] ^ V[5,i] ^ V[6,i]
-                let ti = self.blocks[i][0]
-                    .xor(self.blocks[i][1])
-                    .xor(self.blocks[i][2])
-                    .xor(self.blocks[i][3])
-                    .xor(self.blocks[i][4])
-                    .xor(self.blocks[i][5])
-                    .xor(self.blocks[i][6]);
+                let ti = self.blocks[0][i]
+                    .xor(self.blocks[1][i])
+                    .xor(self.blocks[2][i])
+                    .xor(self.blocks[3][i])
+                    .xor(self.blocks[4][i])
+                    .xor(self.blocks[5][i])
+                    .xor(self.blocks[6][i]);
                 tag_block = tag_block.xor(ti);
             }
 
@@ -254,17 +263,17 @@ impl State {
             for i in 0..D {
                 // ti0 = ti0 ^ V[0,i] ^ V[1,i] ^ V[2,i] ^ V[3,i]
                 ti0 = ti0
-                    .xor(self.blocks[i][0])
-                    .xor(self.blocks[i][1])
-                    .xor(self.blocks[i][2])
-                    .xor(self.blocks[i][3]);
+                    .xor(self.blocks[0][i])
+                    .xor(self.blocks[1][i])
+                    .xor(self.blocks[2][i])
+                    .xor(self.blocks[3][i]);
 
                 // ti1 = ti1 ^ V[4,i] ^ V[5,i] ^ V[6,i] ^ V[7,i]
                 ti1 = ti1
-                    .xor(self.blocks[i][4])
-                    .xor(self.blocks[i][5])
-                    .xor(self.blocks[i][6])
-                    .xor(self.blocks[i][7]);
+                    .xor(self.blocks[4][i])
+                    .xor(self.blocks[5][i])
+                    .xor(self.blocks[6][i])
+                    .xor(self.blocks[7][i]);
             }
 
             let mut tag = [0u8; TAG_BYTES];

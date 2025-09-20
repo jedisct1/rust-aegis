@@ -29,6 +29,7 @@ serde_json = "1.0"
 
 [dependencies]
 aead = { optional = true, version = "0.6.0-rc.2", features = ["rand_core"] }
+softaes = { version = "0.1", optional = true }
 
 [target."cfg(not(any(target_arch = \"wasm32\", target_arch = \"wasm64\")))".dev-dependencies.boring]
 version = "4.19.0"
@@ -39,7 +40,7 @@ harness = false
 
 [features]
 default = ["std"]
-pure-rust = []
+pure-rust = ["softaes"]
 rustcrypto-traits-06 = ["aead"]
 std = []
 
