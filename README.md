@@ -10,7 +10,7 @@ AEGIS is a new family of authenticated encryption algorithms, offering high secu
 
 - `std`: allow dynamic allocations. This is the default.
 
-- `pure-rust`: don't use the `cc` crate to take advantage of the implementations from [`libaegis`](https://github.com/jedisct1/libaegis). Setting this flag will substantially degrade performance and some features may not be available.
+- `pure-rust`: don't use the `cc` crate to take advantage of the implementations from [`libaegis`](https://github.com/jedisct1/libaegis). Setting this flag will substantially degrade performance and some features may not be available. When using the pure-rust implementation, adding `RUSTFLAGS="-C target-cpu=native"` to the environment variable prior to compiling the project is highly recommended for better performance.
 
 - `rustcrypto-traits-06`: add traits from `rust-crypto/aead` version 0.6. Alternative interfaces are available in the `compat` namespace.
 
