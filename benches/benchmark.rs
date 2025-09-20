@@ -1,10 +1,8 @@
 use aegis::aegis128l::Aegis128L;
+use aegis::aegis128x2::Aegis128X2;
+use aegis::aegis128x4::Aegis128X4;
 use aegis::aegis256::Aegis256;
 
-#[cfg(not(feature = "pure-rust"))]
-use aegis::aegis128x2::Aegis128X2;
-#[cfg(not(feature = "pure-rust"))]
-use aegis::aegis128x4::Aegis128X4;
 #[cfg(not(feature = "pure-rust"))]
 use aegis::aegis256x2::Aegis256X2;
 #[cfg(not(feature = "pure-rust"))]
@@ -81,7 +79,6 @@ fn test_aegis128l(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x2(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
@@ -89,7 +86,6 @@ fn test_aegis128x2(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust"))]
 fn test_aegis128x4(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
@@ -141,7 +137,10 @@ fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
     state.finalize();
 }
 
-#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+#[cfg(all(
+    not(feature = "pure-rust"),
+    not(any(target_arch = "wasm32", target_arch = "wasm64"))
+))]
 fn test_hmac_sha256(m: &[u8]) {
     let md = boring::hash::MessageDigest::sha256();
     let mut h1 = boring::hash::hash(md, m).unwrap().to_vec();
@@ -221,20 +220,17 @@ fn main() {
     println!("* Encryption:");
     println!();
 
-    #[cfg(not(feature = "pure-rust"))]
-    {
-        let res = bench.run(options, || test_aegis128x4(&mut m));
-        println!(
-            "aegis128x4          : {}",
-            res.throughput_bits(m.len() as _)
-        );
+    let res = bench.run(options, || test_aegis128x4(&mut m));
+    println!(
+        "aegis128x4          : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
-        let res = bench.run(options, || test_aegis128x2(&mut m));
-        println!(
-            "aegis128x2          : {}",
-            res.throughput_bits(m.len() as _)
-        );
-    }
+    let res = bench.run(options, || test_aegis128x2(&mut m));
+    println!(
+        "aegis128x2          : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     let res = bench.run(options, || test_aegis128l(&mut m));
     println!(

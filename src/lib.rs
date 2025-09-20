@@ -34,7 +34,10 @@ impl std::error::Error for Error {}
 pub mod compat;
 
 #[cfg(test)]
-mod tests {
+mod tests;
+
+#[cfg(test)]
+mod basic_tests {
 
     #[test]
     #[cfg(feature = "std")]
