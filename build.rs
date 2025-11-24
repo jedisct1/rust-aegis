@@ -1,4 +1,13 @@
 use std::env;
+use std::process::Command;
+
+fn has_clang() -> bool {
+    Command::new("clang")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
 
 fn main() {
     let pure_rust = env::var("CARGO_FEATURE_PURE_RUST").is_ok();
@@ -12,7 +21,11 @@ fn main() {
         println!("cargo:rustc-link-search=native={}/wasm-libs", src_dir);
         return;
     }
-    cc::Build::new()
+    let mut build = cc::Build::new();
+    if has_clang() {
+        build.compiler("clang");
+    }
+    build
         .opt_level(3)
         .flag_if_supported("-Wno-unused-command-line-argument")
         .flag_if_supported("-Wno-unknown-pragmas")
