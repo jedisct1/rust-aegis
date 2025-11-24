@@ -1,4 +1,4 @@
-name: Rust
+name: CI
 
 on:
   push:
@@ -6,31 +6,87 @@ on:
   pull_request:
     branches: [ "master" ]
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   build:
+    strategy:
+      matrix:
+        include:
+          # x86_64 runners
+          - os: ubuntu-latest
+            compiler: gcc
+            arch: x86_64
+          - os: ubuntu-latest
+            compiler: clang
+            arch: x86_64
+          - os: ubuntu-24.04
+            compiler: gcc
+            arch: x86_64
+          - os: ubuntu-24.04
+            compiler: clang
+            arch: x86_64
+          - os: ubuntu-22.04
+            compiler: gcc
+            arch: x86_64
+          - os: ubuntu-22.04
+            compiler: clang
+            arch: x86_64
+          # aarch64 runners
+          - os: ubuntu-24.04-arm
+            compiler: gcc
+            arch: aarch64
+          - os: ubuntu-24.04-arm
+            compiler: clang
+            arch: aarch64
+          - os: ubuntu-22.04-arm
+            compiler: gcc
+            arch: aarch64
+          - os: ubuntu-22.04-arm
+            compiler: clang
+            arch: aarch64
+      fail-fast: false
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: true
+
+    - name: Install compiler
+      run: |
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          sudo apt-get update
+          sudo apt-get install -y clang
+        fi
+
+    - name: Set compiler environment variable
+      run: |
+        if [ "${{ matrix.compiler }}" = "gcc" ]; then
+          echo "CC=gcc" >> $GITHUB_ENV
+        else
+          echo "CC=clang" >> $GITHUB_ENV
+        fi
+
     - name: Build
       run: cargo build
+
     - name: Run tests
       run: cargo test
+
     - name: Build pure-rust
       run: cargo build --features=pure-rust
+
     - name: Run pure-rust tests
       run: cargo test --features=pure-rust
+
     - name: Build no-std
       run: cargo build --no-default-features
+
     - name: Run no-std tests
       run: cargo test --no-default-features
+
     - name: Build pure-rust no-std
       run: cargo build --no-default-features --features=pure-rust
+
     - name: Run pure-rust no-std tests
       run: cargo test --no-default-features --features=pure-rust
