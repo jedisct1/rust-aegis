@@ -1,6 +1,5 @@
-use super::AesBlock;
+use super::{AesBlock, AesBlock2};
 pub use crate::Error;
-use core::convert::TryInto;
 
 /// AEGIS-256X2 key
 pub type Key = [u8; 32];
@@ -8,31 +7,34 @@ pub type Key = [u8; 32];
 /// AEGIS-256X2 nonce
 pub type Nonce = [u8; 32];
 
-const D: usize = 2; // Degree of parallelism for AEGIS-256X2
+/// AEGIS-256X2 authentication tag
+pub type Tag<const TAG_BYTES: usize> = [u8; TAG_BYTES];
 
-#[repr(transparent)]
-#[derive(Debug, Clone, Copy)]
+/// State for AEGIS-256X2 with 6 rows of 2 parallel AES blocks
+#[derive(Clone, Copy)]
 struct State {
-    // We maintain 6 AES blocks, each with D parallel states
-    blocks: [[AesBlock; D]; 6],
+    s0: AesBlock2,
+    s1: AesBlock2,
+    s2: AesBlock2,
+    s3: AesBlock2,
+    s4: AesBlock2,
+    s5: AesBlock2,
 }
 
 impl State {
-    fn update(&mut self, d: [AesBlock; D]) {
-        // Update all D states in parallel
-        for i in 0..D {
-            let tmp = self.blocks[5][i];
-
-            self.blocks[5][i] = self.blocks[4][i].round(self.blocks[5][i]);
-            self.blocks[4][i] = self.blocks[3][i].round(self.blocks[4][i]);
-            self.blocks[3][i] = self.blocks[2][i].round(self.blocks[3][i]);
-            self.blocks[2][i] = self.blocks[1][i].round(self.blocks[2][i]);
-            self.blocks[1][i] = self.blocks[0][i].round(self.blocks[1][i]);
-            self.blocks[0][i] = tmp.round(self.blocks[0][i]).xor(d[i]);
-        }
+    #[inline(always)]
+    fn update(&mut self, m: AesBlock2) {
+        let tmp = self.s5;
+        self.s5 = self.s4.round(self.s5);
+        self.s4 = self.s3.round(self.s4);
+        self.s3 = self.s2.round(self.s3);
+        self.s2 = self.s1.round(self.s2);
+        self.s1 = self.s0.round(self.s1);
+        self.s0 = tmp.round(self.s0).xor(m);
     }
 
-    pub fn new(key: &Key, nonce: &Nonce) -> Self {
+    #[inline(always)]
+    fn new(key: &Key, nonce: &Nonce) -> Self {
         let c0 = AesBlock::from_bytes(&[
             0x00, 0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15, 0x22, 0x37, 0x59, 0x90, 0xe9,
             0x79, 0x62,
@@ -46,513 +48,446 @@ impl State {
         let k1 = AesBlock::from_bytes(&key[16..32]);
         let n0 = AesBlock::from_bytes(&nonce[0..16]);
         let n1 = AesBlock::from_bytes(&nonce[16..32]);
+        let k0n0 = k0.xor(n0);
+        let k1n1 = k1.xor(n1);
+        let k0c0 = k0.xor(c0);
+        let k1c1 = k1.xor(c1);
 
-        // Initialize 6 blocks, each with D parallel states
-        let mut blocks = [[AesBlock::from_bytes(&[0u8; 16]); D]; 6];
+        // Context blocks for each parallel state
+        let ctx0 = AesBlock::from_bytes(&[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let ctx1 = AesBlock::from_bytes(&[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-        for i in 0..D {
-            blocks[0][i] = k0.xor(n0);
-            blocks[1][i] = k1.xor(n1);
-            blocks[2][i] = c1;
-            blocks[3][i] = c0;
-            blocks[4][i] = k0.xor(c0);
-            blocks[5][i] = k1.xor(c1);
-        }
+        let k0n0_2 = AesBlock2::from_blocks(k0n0, k0n0);
+        let k1n1_2 = AesBlock2::from_blocks(k1n1, k1n1);
+        let c0_2 = AesBlock2::from_blocks(c0, c0);
+        let c1_2 = AesBlock2::from_blocks(c1, c1);
+        let k0c0_2 = AesBlock2::from_blocks(k0c0, k0c0);
+        let k1c1_2 = AesBlock2::from_blocks(k1c1, k1c1);
+        let ctx = AesBlock2::from_blocks(ctx0, ctx1);
+        let k0_2 = AesBlock2::from_blocks(k0, k0);
+        let k1_2 = AesBlock2::from_blocks(k1, k1);
 
-        let mut state = State { blocks };
+        let mut state = State {
+            s0: k0n0_2,
+            s1: k1n1_2,
+            s2: c1_2,
+            s3: c0_2,
+            s4: k0c0_2,
+            s5: k1c1_2,
+        };
 
-        // Create context for each state
-        let mut ctx = [AesBlock::from_bytes(&[0u8; 16]); D];
-        for i in 0..D {
-            let mut ctx_bytes = [0u8; 16];
-            ctx_bytes[0] = i as u8;
-            ctx_bytes[1] = (D - 1) as u8;
-            ctx[i] = AesBlock::from_bytes(&ctx_bytes);
-        }
-
-        // Initialization rounds
         for _ in 0..4 {
-            // Add context to states and update
-            for i in 0..D {
-                state.blocks[3][i] = state.blocks[3][i].xor(ctx[i]);
-                state.blocks[5][i] = state.blocks[5][i].xor(ctx[i]);
-            }
+            state.s3 = state.s3.xor(ctx);
+            state.s5 = state.s5.xor(ctx);
+            state.update(k0_2);
 
-            let mut k0_v = [AesBlock::from_bytes(&[0u8; 16]); D];
-            for i in 0..D {
-                k0_v[i] = k0;
-            }
-            state.update(k0_v);
+            state.s3 = state.s3.xor(ctx);
+            state.s5 = state.s5.xor(ctx);
+            state.update(k1_2);
 
-            for i in 0..D {
-                state.blocks[3][i] = state.blocks[3][i].xor(ctx[i]);
-                state.blocks[5][i] = state.blocks[5][i].xor(ctx[i]);
-            }
+            state.s3 = state.s3.xor(ctx);
+            state.s5 = state.s5.xor(ctx);
+            state.update(k0n0_2);
 
-            let mut k1_v = [AesBlock::from_bytes(&[0u8; 16]); D];
-            for i in 0..D {
-                k1_v[i] = k1;
-            }
-            state.update(k1_v);
-
-            for i in 0..D {
-                state.blocks[3][i] = state.blocks[3][i].xor(ctx[i]);
-                state.blocks[5][i] = state.blocks[5][i].xor(ctx[i]);
-            }
-
-            let mut k0n0_v = [AesBlock::from_bytes(&[0u8; 16]); D];
-            for i in 0..D {
-                k0n0_v[i] = k0.xor(n0);
-            }
-            state.update(k0n0_v);
-
-            for i in 0..D {
-                state.blocks[3][i] = state.blocks[3][i].xor(ctx[i]);
-                state.blocks[5][i] = state.blocks[5][i].xor(ctx[i]);
-            }
-
-            let mut k1n1_v = [AesBlock::from_bytes(&[0u8; 16]); D];
-            for i in 0..D {
-                k1n1_v[i] = k1.xor(n1);
-            }
-            state.update(k1n1_v);
+            state.s3 = state.s3.xor(ctx);
+            state.s5 = state.s5.xor(ctx);
+            state.update(k1n1_2);
         }
 
         state
     }
 
     #[inline(always)]
-    fn absorb(&mut self, src: &[u8; 16 * D]) {
-        let mut msg = [AesBlock::from_bytes(&[0u8; 16]); D];
-        // Split across D states: 16 bytes each per state
-        for i in 0..D {
-            msg[i] = AesBlock::from_bytes(&src[i * 16..i * 16 + 16]);
-        }
-        self.update(msg);
+    fn absorb(&mut self, src: &[u8; 32]) {
+        let m = AesBlock2::from_blocks(
+            AesBlock::from_bytes(&src[0..16]),
+            AesBlock::from_bytes(&src[16..32]),
+        );
+        self.update(m);
     }
 
-    fn enc(&mut self, dst: &mut [u8; 16 * D], src: &[u8; 16 * D]) {
-        for i in 0..D {
-            let z = self.blocks[1][i]
-                .xor(self.blocks[4][i])
-                .xor(self.blocks[5][i])
-                .xor(self.blocks[2][i].and(self.blocks[3][i]));
+    #[inline(always)]
+    fn enc(&mut self, dst: &mut [u8; 32], src: &[u8; 32]) {
+        let z = self.s1.xor(self.s4).xor(self.s5).xor(self.s2.and(self.s3));
 
-            let msg = AesBlock::from_bytes(&src[i * 16..i * 16 + 16]);
-            let c = msg.xor(z);
+        let m = AesBlock2::from_blocks(
+            AesBlock::from_bytes(&src[0..16]),
+            AesBlock::from_bytes(&src[16..32]),
+        );
 
-            dst[i * 16..i * 16 + 16].copy_from_slice(&c.to_bytes());
-        }
+        let c = m.xor(z);
+        let (c0, c1) = c.as_blocks();
+        dst[0..16].copy_from_slice(&c0.to_bytes());
+        dst[16..32].copy_from_slice(&c1.to_bytes());
 
-        self.absorb(src);
+        self.update(m);
     }
 
-    fn dec(&mut self, dst: &mut [u8; 16 * D], src: &[u8; 16 * D]) {
-        let mut msg = [AesBlock::from_bytes(&[0u8; 16]); D];
+    #[inline(always)]
+    fn dec(&mut self, dst: &mut [u8; 32], src: &[u8; 32]) {
+        let z = self.s1.xor(self.s4).xor(self.s5).xor(self.s2.and(self.s3));
 
-        for i in 0..D {
-            let z = self.blocks[1][i]
-                .xor(self.blocks[4][i])
-                .xor(self.blocks[5][i])
-                .xor(self.blocks[2][i].and(self.blocks[3][i]));
+        let c = AesBlock2::from_blocks(
+            AesBlock::from_bytes(&src[0..16]),
+            AesBlock::from_bytes(&src[16..32]),
+        );
 
-            msg[i] = AesBlock::from_bytes(&src[i * 16..i * 16 + 16]).xor(z);
-            dst[i * 16..i * 16 + 16].copy_from_slice(&msg[i].to_bytes());
-        }
+        let m = c.xor(z);
+        let (m0, m1) = m.as_blocks();
+        dst[0..16].copy_from_slice(&m0.to_bytes());
+        dst[16..32].copy_from_slice(&m1.to_bytes());
 
-        self.update(msg);
+        self.update(m);
     }
 
-    fn dec_partial(&mut self, dst: &mut [u8; 16 * D], src: &[u8]) -> usize {
+    #[inline(always)]
+    fn dec_partial(&mut self, dst: &mut [u8], src: &[u8]) {
         let len = src.len();
-        let _r_bytes = 16 * D; // R bits = 128 * D bits = 16 * D bytes
+        debug_assert!(len < 32);
 
-        // Build z vector according to spec
-        let mut z_bytes = [0u8; 32]; // 128 * D bits = 32 bytes for D=2
+        let z = self.s1.xor(self.s4).xor(self.s5).xor(self.s2.and(self.s3));
+        let (z0, z1) = z.as_blocks();
 
-        for i in 0..D {
-            let z_i = self.blocks[1][i]
-                .xor(self.blocks[4][i])
-                .xor(self.blocks[5][i])
-                .xor(self.blocks[2][i].and(self.blocks[3][i]));
-            z_bytes[i * 16..i * 16 + 16].copy_from_slice(&z_i.to_bytes());
-        }
+        let mut pad = [0u8; 32];
+        pad[..len].copy_from_slice(src);
 
-        // ZeroPad(cn, R)
-        let mut padded_input = [0u8; 32]; // R bytes
-        padded_input[..len].copy_from_slice(src);
+        // XOR with keystream
+        let mut out = [0u8; 32];
+        let p0 = AesBlock::from_bytes(&pad[0..16]).xor(z0);
+        let p1 = AesBlock::from_bytes(&pad[16..32]).xor(z1);
+        out[0..16].copy_from_slice(&p0.to_bytes());
+        out[16..32].copy_from_slice(&p1.to_bytes());
 
-        // out = t ^ z
-        let mut output = [0u8; 32];
-        for i in 0..32 {
-            output[i] = padded_input[i] ^ z_bytes[i];
-        }
+        dst[..len].copy_from_slice(&out[..len]);
 
-        // xn = Truncate(out, |cn|)
-        dst[..len].copy_from_slice(&output[..len]);
-
-        // v = ZeroPad(xn, R)
-        let mut v_padded = [0u8; 32]; // R bytes
-        v_padded[..len].copy_from_slice(&output[..len]);
-
-        let mut update_data = [AesBlock::from_bytes(&[0u8; 16]); D];
-        for i in 0..D {
-            update_data[i] = AesBlock::from_bytes(&v_padded[i * 16..i * 16 + 16]);
-        }
-
-        self.update(update_data);
-        len
+        // Zero pad for state update
+        let mut msg_pad = [0u8; 32];
+        msg_pad[..len].copy_from_slice(&out[..len]);
+        let m = AesBlock2::from_blocks(
+            AesBlock::from_bytes(&msg_pad[0..16]),
+            AesBlock::from_bytes(&msg_pad[16..32]),
+        );
+        self.update(m);
     }
 
-    fn finalize<const TAG_BYTES: usize>(
-        &mut self,
-        ad_len: usize,
-        msg_len: usize,
-    ) -> [u8; TAG_BYTES] {
-        // Create t vector according to spec
-        let u = {
-            let mut u_bytes = [0u8; 16];
-            u_bytes[..8].copy_from_slice(&(ad_len as u64 * 8).to_le_bytes());
-            u_bytes[8..16].copy_from_slice(&(msg_len as u64 * 8).to_le_bytes());
-            AesBlock::from_bytes(&u_bytes)
-        };
+    #[inline(always)]
+    fn mac<const TAG_BYTES: usize>(&mut self, adlen: usize, mlen: usize) -> Tag<TAG_BYTES> {
+        let mut sizes = [0u8; 16];
+        sizes[..8].copy_from_slice(&(adlen as u64 * 8).to_le_bytes());
+        sizes[8..16].copy_from_slice(&(mlen as u64 * 8).to_le_bytes());
+        let u = AesBlock::from_bytes(&sizes);
 
-        // Construct t vector: for i in 0..D: t = t || (V[3,i] ^ u)
-        let mut t_data = [AesBlock::from_bytes(&[0u8; 16]); D];
-        for i in 0..D {
-            t_data[i] = self.blocks[3][i].xor(u); // V[3,i] ^ u
-        }
+        let (s30, s31) = self.s3.as_blocks();
+        let t0 = s30.xor(u);
+        let t1 = s31.xor(u);
+        let t = AesBlock2::from_blocks(t0, t1);
 
-        // Repeat(7, Update(t)) - Update all D states simultaneously
         for _ in 0..7 {
-            self.update(t_data);
+            self.update(t);
         }
 
-        // Compute final tag by XORing tags from all D states
+        let (s00, s01) = self.s0.as_blocks();
+        let (s10, s11) = self.s1.as_blocks();
+        let (s20, s21) = self.s2.as_blocks();
+        let (s30, s31) = self.s3.as_blocks();
+        let (s40, s41) = self.s4.as_blocks();
+        let (s50, s51) = self.s5.as_blocks();
+
+        let mut tag = [0u8; TAG_BYTES];
         if TAG_BYTES == 16 {
-            let mut tag_block = AesBlock::from_bytes(&[0u8; 16]); // ZeroPad({}, 128)
-
-            for i in 0..D {
-                // ti = V[0,i] ^ V[1,i] ^ V[2,i] ^ V[3,i] ^ V[4,i] ^ V[5,i]
-                let ti = self.blocks[0][i]
-                    .xor(self.blocks[1][i])
-                    .xor(self.blocks[2][i])
-                    .xor(self.blocks[3][i])
-                    .xor(self.blocks[4][i])
-                    .xor(self.blocks[5][i]);
-                tag_block = tag_block.xor(ti);
-            }
-
-            let mut tag = [0u8; TAG_BYTES];
-            tag.copy_from_slice(&tag_block.to_bytes()[..TAG_BYTES]);
-            tag
+            let t0 = s00.xor(s10).xor(s20).xor(s30).xor(s40).xor(s50);
+            let t1 = s01.xor(s11).xor(s21).xor(s31).xor(s41).xor(s51);
+            tag.copy_from_slice(&t0.xor(t1).to_bytes()[..TAG_BYTES]);
         } else {
-            // TAG_BYTES == 32
-            let mut ti0 = AesBlock::from_bytes(&[0u8; 16]); // ZeroPad({}, 128)
-            let mut ti1 = AesBlock::from_bytes(&[0u8; 16]); // ZeroPad({}, 128)
-
-            for i in 0..D {
-                // ti0 = ti0 ^ V[0,i] ^ V[1,i] ^ V[2,i]
-                ti0 = ti0
-                    .xor(self.blocks[0][i])
-                    .xor(self.blocks[1][i])
-                    .xor(self.blocks[2][i]);
-
-                // ti1 = ti1 ^ V[3,i] ^ V[4,i] ^ V[5,i]
-                ti1 = ti1
-                    .xor(self.blocks[3][i])
-                    .xor(self.blocks[4][i])
-                    .xor(self.blocks[5][i]);
-            }
-
-            let mut tag = [0u8; TAG_BYTES];
-            tag[..16].copy_from_slice(&ti0.to_bytes());
-            tag[16..32].copy_from_slice(&ti1.to_bytes());
-            tag
+            let t0_lo = s00.xor(s10).xor(s20);
+            let t1_lo = s01.xor(s11).xor(s21);
+            let t0_hi = s30.xor(s40).xor(s50);
+            let t1_hi = s31.xor(s41).xor(s51);
+            tag[..16].copy_from_slice(&t0_lo.xor(t1_lo).to_bytes());
+            tag[16..].copy_from_slice(&t0_hi.xor(t1_hi).to_bytes());
         }
+        tag
     }
 }
 
-/// Tag length in bytes must be 16 (128 bits) or 32 (256 bits)
-#[derive(Copy, Clone, Debug)]
+/// AEGIS-256X2 authenticated encryption
+#[derive(Clone, Copy)]
 pub struct Aegis256X2<const TAG_BYTES: usize> {
-    key: Key,
-    nonce: Nonce,
+    state: State,
 }
-
-/// AEGIS-256X2 authentication tag
-pub type Tag<const TAG_BYTES: usize> = [u8; TAG_BYTES];
 
 impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
+    /// Create a new AEGIS-256X2 instance
     pub fn new(key: &Key, nonce: &Nonce) -> Self {
-        assert!(
-            TAG_BYTES == 16 || TAG_BYTES == 32,
-            "Invalid tag length, must be 16 or 32"
-        );
+        debug_assert!(TAG_BYTES == 16 || TAG_BYTES == 32);
         Aegis256X2 {
-            key: *key,
-            nonce: *nonce,
+            state: State::new(key, nonce),
         }
     }
 
-    /// Encrypts a message using AEGIS-256X2
+    /// Encrypt a message
     #[cfg(feature = "std")]
-    pub fn encrypt(self, m: &[u8], ad: &[u8]) -> (Vec<u8>, Tag<TAG_BYTES>) {
-        let mut state = State::new(&self.key, &self.nonce);
-        let mut c = vec![0u8; m.len()];
+    pub fn encrypt(mut self, m: &[u8], ad: &[u8]) -> (Vec<u8>, Tag<TAG_BYTES>) {
+        let state = &mut self.state;
+        let mlen = m.len();
+        let adlen = ad.len();
+        let mut c = vec![0u8; mlen];
 
-        // Process associated data
-        let ad_blocks = ad.len() / (16 * D);
-        let ad_rem = ad.len() % (16 * D);
-
-        for i in 0..ad_blocks {
-            let block = &ad[i * 16 * D..(i + 1) * 16 * D];
-            state.absorb(block.try_into().unwrap());
+        // Process AD
+        let mut i = 0;
+        while i + 32 <= adlen {
+            let mut block = [0u8; 32];
+            block.copy_from_slice(&ad[i..i + 32]);
+            state.absorb(&block);
+            i += 32;
         }
-
-        if ad_rem > 0 {
-            let mut buf = [0u8; 16 * D];
-            buf[..ad_rem].copy_from_slice(&ad[ad_blocks * 16 * D..]);
-            state.absorb(&buf);
+        if adlen % 32 != 0 {
+            let mut block = [0u8; 32];
+            block[..adlen - i].copy_from_slice(&ad[i..]);
+            state.absorb(&block);
         }
 
         // Process message
-        let msg_blocks = m.len() / (16 * D);
-        let msg_rem = m.len() % (16 * D);
-
-        for i in 0..msg_blocks {
-            let src_block = &m[i * 16 * D..(i + 1) * 16 * D];
-            let dst_block = &mut c[i * 16 * D..(i + 1) * 16 * D];
-            state.enc(dst_block.try_into().unwrap(), src_block.try_into().unwrap());
+        i = 0;
+        while i + 32 <= mlen {
+            let mut src = [0u8; 32];
+            let mut dst = [0u8; 32];
+            src.copy_from_slice(&m[i..i + 32]);
+            state.enc(&mut dst, &src);
+            c[i..i + 32].copy_from_slice(&dst);
+            i += 32;
+        }
+        if mlen % 32 != 0 {
+            let mut src = [0u8; 32];
+            let mut dst = [0u8; 32];
+            src[..mlen - i].copy_from_slice(&m[i..]);
+            state.enc(&mut dst, &src);
+            c[i..].copy_from_slice(&dst[..mlen - i]);
         }
 
-        if msg_rem > 0 {
-            let mut src_buf = [0u8; 16 * D];
-            let mut dst_buf = [0u8; 16 * D];
-            src_buf[..msg_rem].copy_from_slice(&m[msg_blocks * 16 * D..]);
-            state.enc(&mut dst_buf, &src_buf);
-            c[msg_blocks * 16 * D..].copy_from_slice(&dst_buf[..msg_rem]);
-        }
-
-        let tag = state.finalize::<TAG_BYTES>(ad.len(), m.len());
+        let tag = state.mac::<TAG_BYTES>(adlen, mlen);
         (c, tag)
     }
 
-    /// Encrypts a message in place
-    pub fn encrypt_in_place(self, mc: &mut [u8], ad: &[u8]) -> Tag<TAG_BYTES> {
-        let mut state = State::new(&self.key, &self.nonce);
+    /// Encrypt in place
+    pub fn encrypt_in_place(mut self, mc: &mut [u8], ad: &[u8]) -> Tag<TAG_BYTES> {
+        let state = &mut self.state;
+        let mclen = mc.len();
+        let adlen = ad.len();
 
-        // Process associated data
-        let ad_blocks = ad.len() / (16 * D);
-        let ad_rem = ad.len() % (16 * D);
-
-        for i in 0..ad_blocks {
-            let block = &ad[i * 16 * D..(i + 1) * 16 * D];
-            state.absorb(block.try_into().unwrap());
+        // Process AD
+        let mut i = 0;
+        while i + 32 <= adlen {
+            let mut block = [0u8; 32];
+            block.copy_from_slice(&ad[i..i + 32]);
+            state.absorb(&block);
+            i += 32;
         }
-
-        if ad_rem > 0 {
-            let mut buf = [0u8; 16 * D];
-            buf[..ad_rem].copy_from_slice(&ad[ad_blocks * 16 * D..]);
-            state.absorb(&buf);
+        if adlen % 32 != 0 {
+            let mut block = [0u8; 32];
+            block[..adlen - i].copy_from_slice(&ad[i..]);
+            state.absorb(&block);
         }
 
         // Process message
-        let msg_len = mc.len();
-        let msg_blocks = msg_len / (16 * D);
-        let msg_rem = msg_len % (16 * D);
-
-        for i in 0..msg_blocks {
-            let mut block = [0u8; 16 * D];
-            block.copy_from_slice(&mc[i * 16 * D..(i + 1) * 16 * D]);
-            let src = block.clone();
-            state.enc(&mut block, &src);
-            mc[i * 16 * D..(i + 1) * 16 * D].copy_from_slice(&block);
+        i = 0;
+        while i + 32 <= mclen {
+            let mut src = [0u8; 32];
+            let mut dst = [0u8; 32];
+            src.copy_from_slice(&mc[i..i + 32]);
+            state.enc(&mut dst, &src);
+            mc[i..i + 32].copy_from_slice(&dst);
+            i += 32;
+        }
+        if mclen % 32 != 0 {
+            let mut src = [0u8; 32];
+            let mut dst = [0u8; 32];
+            src[..mclen - i].copy_from_slice(&mc[i..]);
+            state.enc(&mut dst, &src);
+            mc[i..].copy_from_slice(&dst[..mclen - i]);
         }
 
-        if msg_rem > 0 {
-            let mut src_buf = [0u8; 16 * D];
-            let mut dst_buf = [0u8; 16 * D];
-            src_buf[..msg_rem].copy_from_slice(&mc[msg_blocks * 16 * D..]);
-            state.enc(&mut dst_buf, &src_buf);
-            mc[msg_blocks * 16 * D..].copy_from_slice(&dst_buf[..msg_rem]);
-        }
-
-        state.finalize::<TAG_BYTES>(ad.len(), msg_len)
+        state.mac::<TAG_BYTES>(adlen, mclen)
     }
 
-    /// Decrypts a message using AEGIS-256X2
+    /// Decrypt a message
     #[cfg(feature = "std")]
-    pub fn decrypt(self, c: &[u8], tag: &Tag<TAG_BYTES>, ad: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut state = State::new(&self.key, &self.nonce);
-        let mut m = vec![0u8; c.len()];
+    pub fn decrypt(mut self, c: &[u8], tag: &Tag<TAG_BYTES>, ad: &[u8]) -> Result<Vec<u8>, Error> {
+        let state = &mut self.state;
+        let clen = c.len();
+        let adlen = ad.len();
+        let mut m = vec![0u8; clen];
 
-        // Process associated data
-        let ad_blocks = ad.len() / (16 * D);
-        let ad_rem = ad.len() % (16 * D);
-
-        for i in 0..ad_blocks {
-            let block = &ad[i * 16 * D..(i + 1) * 16 * D];
-            state.absorb(block.try_into().unwrap());
+        // Process AD
+        let mut i = 0;
+        while i + 32 <= adlen {
+            let mut block = [0u8; 32];
+            block.copy_from_slice(&ad[i..i + 32]);
+            state.absorb(&block);
+            i += 32;
         }
-
-        if ad_rem > 0 {
-            let mut buf = [0u8; 16 * D];
-            buf[..ad_rem].copy_from_slice(&ad[ad_blocks * 16 * D..]);
-            state.absorb(&buf);
+        if adlen % 32 != 0 {
+            let mut block = [0u8; 32];
+            block[..adlen - i].copy_from_slice(&ad[i..]);
+            state.absorb(&block);
         }
 
         // Process ciphertext
-        let ct_blocks = c.len() / (16 * D);
-        let ct_rem = c.len() % (16 * D);
-
-        for i in 0..ct_blocks {
-            let src_block = &c[i * 16 * D..(i + 1) * 16 * D];
-            let dst_block = &mut m[i * 16 * D..(i + 1) * 16 * D];
-            state.dec(dst_block.try_into().unwrap(), src_block.try_into().unwrap());
+        i = 0;
+        while i + 32 <= clen {
+            let mut src = [0u8; 32];
+            let mut dst = [0u8; 32];
+            src.copy_from_slice(&c[i..i + 32]);
+            state.dec(&mut dst, &src);
+            m[i..i + 32].copy_from_slice(&dst);
+            i += 32;
+        }
+        if clen % 32 != 0 {
+            state.dec_partial(&mut m[i..], &c[i..]);
         }
 
-        if ct_rem > 0 {
-            let mut dst_buf = [0u8; 16 * D];
-            let actual_len = state.dec_partial(&mut dst_buf, &c[ct_blocks * 16 * D..]);
-            m[ct_blocks * 16 * D..].copy_from_slice(&dst_buf[..actual_len]);
+        let tag2 = state.mac::<TAG_BYTES>(adlen, clen);
+        let mut acc = 0u8;
+        for (a, b) in tag.iter().zip(tag2.iter()) {
+            acc |= a ^ b;
         }
-
-        let computed_tag = state.finalize::<TAG_BYTES>(ad.len(), c.len());
-
-        // Constant-time tag comparison
-        let mut diff = 0u8;
-        for i in 0..TAG_BYTES {
-            diff |= computed_tag[i] ^ tag[i];
-        }
-
-        if diff != 0 {
+        if acc != 0 {
+            m.fill(0xaa);
             return Err(Error::InvalidTag);
         }
-
         Ok(m)
     }
 
-    /// Decrypts a message in place
+    /// Decrypt in place
     pub fn decrypt_in_place(
-        self,
+        mut self,
         mc: &mut [u8],
         tag: &Tag<TAG_BYTES>,
         ad: &[u8],
     ) -> Result<(), Error> {
-        let mut state = State::new(&self.key, &self.nonce);
+        let state = &mut self.state;
+        let mclen = mc.len();
+        let adlen = ad.len();
 
-        // Process associated data
-        let ad_blocks = ad.len() / (16 * D);
-        let ad_rem = ad.len() % (16 * D);
-
-        for i in 0..ad_blocks {
-            let block = &ad[i * 16 * D..(i + 1) * 16 * D];
-            state.absorb(block.try_into().unwrap());
+        // Process AD
+        let mut i = 0;
+        while i + 32 <= adlen {
+            let mut block = [0u8; 32];
+            block.copy_from_slice(&ad[i..i + 32]);
+            state.absorb(&block);
+            i += 32;
         }
-
-        if ad_rem > 0 {
-            let mut buf = [0u8; 16 * D];
-            buf[..ad_rem].copy_from_slice(&ad[ad_blocks * 16 * D..]);
-            state.absorb(&buf);
+        if adlen % 32 != 0 {
+            let mut block = [0u8; 32];
+            block[..adlen - i].copy_from_slice(&ad[i..]);
+            state.absorb(&block);
         }
 
         // Process ciphertext
-        let ct_len = mc.len();
-        let ct_blocks = ct_len / (16 * D);
-        let ct_rem = ct_len % (16 * D);
-
-        for i in 0..ct_blocks {
-            let mut block = [0u8; 16 * D];
-            block.copy_from_slice(&mc[i * 16 * D..(i + 1) * 16 * D]);
-            let src = block.clone();
-            state.dec(&mut block, &src);
-            mc[i * 16 * D..(i + 1) * 16 * D].copy_from_slice(&block);
+        i = 0;
+        while i + 32 <= mclen {
+            let mut src = [0u8; 32];
+            let mut dst = [0u8; 32];
+            src.copy_from_slice(&mc[i..i + 32]);
+            state.dec(&mut dst, &src);
+            mc[i..i + 32].copy_from_slice(&dst);
+            i += 32;
+        }
+        if mclen % 32 != 0 {
+            let remaining = mclen - i;
+            let mut tmp = [0u8; 32];
+            state.dec_partial(&mut tmp[..remaining], &mc[i..]);
+            mc[i..].copy_from_slice(&tmp[..remaining]);
         }
 
-        if ct_rem > 0 {
-            let mut dst_buf = [0u8; 16 * D];
-            let actual_len = state.dec_partial(&mut dst_buf, &mc[ct_blocks * 16 * D..]);
-            mc[ct_blocks * 16 * D..].copy_from_slice(&dst_buf[..actual_len]);
+        let tag2 = state.mac::<TAG_BYTES>(adlen, mclen);
+        let mut acc = 0u8;
+        for (a, b) in tag.iter().zip(tag2.iter()) {
+            acc |= a ^ b;
         }
-
-        let computed_tag = state.finalize::<TAG_BYTES>(ad.len(), ct_len);
-
-        // Constant-time tag comparison
-        let mut diff = 0u8;
-        for i in 0..TAG_BYTES {
-            diff |= computed_tag[i] ^ tag[i];
-        }
-
-        if diff != 0 {
+        if acc != 0 {
+            mc.fill(0xaa);
             return Err(Error::InvalidTag);
         }
-
         Ok(())
     }
 }
 
-// MAC functionality
+/// AEGIS-256X2 MAC
+#[derive(Clone)]
 pub struct Aegis256X2Mac<const TAG_BYTES: usize> {
     state: State,
-    ad_len: usize,
+    buf: [u8; 32],
+    buf_len: usize,
     msg_len: usize,
 }
 
 impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
     pub fn new(key: &Key) -> Self {
         let nonce = [0u8; 32];
+        Self::new_with_nonce(key, &nonce)
+    }
+
+    pub fn new_with_nonce(key: &Key, nonce: &Nonce) -> Self {
         Aegis256X2Mac {
-            state: State::new(key, &nonce),
-            ad_len: 0,
+            state: State::new(key, nonce),
+            buf: [0u8; 32],
+            buf_len: 0,
             msg_len: 0,
         }
     }
 
     pub fn update(&mut self, data: &[u8]) {
-        let blocks = data.len() / (16 * D);
-        let rem = data.len() % (16 * D);
-
-        for i in 0..blocks {
-            let block = &data[i * 16 * D..(i + 1) * 16 * D];
-            self.state.absorb(block.try_into().unwrap());
-        }
-
-        if rem > 0 {
-            let mut buf = [0u8; 16 * D];
-            buf[..rem].copy_from_slice(&data[blocks * 16 * D..]);
-            self.state.absorb(&buf);
-        }
-
         self.msg_len += data.len();
+        let mut offset = 0;
+
+        // Process buffered data first
+        if self.buf_len > 0 {
+            let needed = 32 - self.buf_len;
+            if data.len() < needed {
+                self.buf[self.buf_len..self.buf_len + data.len()].copy_from_slice(data);
+                self.buf_len += data.len();
+                return;
+            }
+            self.buf[self.buf_len..].copy_from_slice(&data[..needed]);
+            self.state.absorb(&self.buf);
+            self.buf_len = 0;
+            offset = needed;
+        }
+
+        // Process full blocks
+        while offset + 32 <= data.len() {
+            let mut block = [0u8; 32];
+            block.copy_from_slice(&data[offset..offset + 32]);
+            self.state.absorb(&block);
+            offset += 32;
+        }
+
+        // Buffer remaining
+        if offset < data.len() {
+            self.buf_len = data.len() - offset;
+            self.buf[..self.buf_len].copy_from_slice(&data[offset..]);
+        }
     }
 
     pub fn finalize(mut self) -> Tag<TAG_BYTES> {
-        self.state.finalize::<TAG_BYTES>(self.ad_len, self.msg_len)
+        // Pad and absorb final block
+        if self.buf_len > 0 || self.msg_len == 0 {
+            self.buf[self.buf_len..].fill(0);
+            self.state.absorb(&self.buf);
+        }
+        self.state.mac::<TAG_BYTES>(0, self.msg_len)
     }
 
-    pub fn verify(mut self, tag: &Tag<TAG_BYTES>) -> Result<(), Error> {
-        let computed_tag = self.state.finalize::<TAG_BYTES>(self.ad_len, self.msg_len);
-
-        let mut diff = 0u8;
-        for i in 0..TAG_BYTES {
-            diff |= computed_tag[i] ^ tag[i];
+    pub fn verify(self, expected: &Tag<TAG_BYTES>) -> Result<(), Error> {
+        let tag = self.finalize();
+        let mut acc = 0u8;
+        for (a, b) in tag.iter().zip(expected.iter()) {
+            acc |= a ^ b;
         }
-
-        if diff != 0 {
+        if acc != 0 {
             return Err(Error::InvalidTag);
         }
-
         Ok(())
-    }
-}
-
-impl<const TAG_BYTES: usize> Clone for Aegis256X2Mac<TAG_BYTES> {
-    fn clone(&self) -> Self {
-        Self {
-            state: self.state,
-            ad_len: self.ad_len,
-            msg_len: self.msg_len,
-        }
     }
 }

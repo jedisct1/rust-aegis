@@ -3,9 +3,7 @@ use aegis::aegis128x2::Aegis128X2;
 use aegis::aegis128x4::Aegis128X4;
 use aegis::aegis256::Aegis256;
 
-#[cfg(not(feature = "pure-rust"))]
 use aegis::aegis256x2::Aegis256X2;
-#[cfg(not(feature = "pure-rust"))]
 use aegis::aegis256x4::Aegis256X4;
 
 #[cfg(not(feature = "pure-rust"))]
@@ -100,7 +98,6 @@ fn test_aegis256(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust"))]
 fn test_aegis256x2(m: &mut [u8]) {
     let key = [0u8; 32];
     let nonce = [0u8; 32];
@@ -108,7 +105,6 @@ fn test_aegis256x2(m: &mut [u8]) {
     state.encrypt_in_place(m, &[]);
 }
 
-#[cfg(not(feature = "pure-rust"))]
 fn test_aegis256x4(m: &mut [u8]) {
     let key = [0u8; 32];
     let nonce = [0u8; 32];
@@ -238,20 +234,17 @@ fn main() {
         res.throughput_bits(m.len() as _)
     );
 
-    #[cfg(not(feature = "pure-rust"))]
-    {
-        let res = bench.run(options, || test_aegis256x2(&mut m));
-        println!(
-            "aegis256x2          : {}",
-            res.throughput_bits(m.len() as _)
-        );
+    let res = bench.run(options, || test_aegis256x2(&mut m));
+    println!(
+        "aegis256x2          : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
-        let res = bench.run(options, || test_aegis256x4(&mut m));
-        println!(
-            "aegis256x4          : {}",
-            res.throughput_bits(m.len() as _)
-        );
-    }
+    let res = bench.run(options, || test_aegis256x4(&mut m));
+    println!(
+        "aegis256x4          : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     let res = bench.run(options, || test_aegis256(&mut m));
     println!(

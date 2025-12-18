@@ -14,18 +14,19 @@ struct State {
 }
 
 impl State {
+    #[inline(always)]
     fn update(&mut self, d: AesBlock) {
         let blocks = &mut self.blocks;
         let tmp = blocks[5];
-        let mut i = 5;
-        while i > 0 {
-            blocks[i] = blocks[i - 1].round(blocks[i]);
-            i -= 1;
-        }
-        blocks[0] = tmp.round(blocks[0]);
-        blocks[0] = blocks[0].xor(d);
+        blocks[5] = blocks[4].round(blocks[5]);
+        blocks[4] = blocks[3].round(blocks[4]);
+        blocks[3] = blocks[2].round(blocks[3]);
+        blocks[2] = blocks[1].round(blocks[2]);
+        blocks[1] = blocks[0].round(blocks[1]);
+        blocks[0] = tmp.round(blocks[0]).xor(d);
     }
 
+    #[inline(always)]
     pub fn new(key: &Key, nonce: &Nonce) -> Self {
         let c0 = AesBlock::from_bytes(&[
             0x00, 0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15, 0x22, 0x37, 0x59, 0x90, 0xe9,
@@ -71,6 +72,7 @@ impl State {
         self.update(msg);
     }
 
+    #[inline(always)]
     fn enc(&mut self, dst: &mut [u8; 16], src: &[u8; 16]) {
         let blocks = &self.blocks;
         let z = blocks[5]
@@ -83,6 +85,7 @@ impl State {
         self.update(msg);
     }
 
+    #[inline(always)]
     fn dec(&mut self, dst: &mut [u8; 16], src: &[u8; 16]) {
         let blocks = &self.blocks;
         let z = blocks[5]
@@ -94,6 +97,7 @@ impl State {
         self.update(msg);
     }
 
+    #[inline(always)]
     fn dec_partial(&mut self, dst: &mut [u8; 16], src: &[u8]) {
         let len = src.len();
         let mut src_padded = [0u8; 16];
@@ -113,6 +117,7 @@ impl State {
         self.update(msg);
     }
 
+    #[inline(always)]
     fn mac<const TAG_BYTES: usize>(&mut self, adlen: usize, mlen: usize) -> Tag<TAG_BYTES> {
         let tmp = {
             let blocks = &self.blocks;
