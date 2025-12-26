@@ -149,6 +149,39 @@ impl State {
         }
         tag
     }
+
+    #[inline(always)]
+    fn mac_finalize<const TAG_BYTES: usize>(&mut self, data_len: usize) -> Tag<TAG_BYTES> {
+        let tmp = {
+            let blocks = &self.blocks;
+            let mut sizes = [0u8; 16];
+            sizes[..8].copy_from_slice(&(data_len as u64 * 8).to_le_bytes());
+            sizes[8..16].copy_from_slice(&(TAG_BYTES as u64 * 8).to_le_bytes());
+            AesBlock::from_bytes(&sizes).xor(blocks[3])
+        };
+        for _ in 0..7 {
+            self.update(tmp);
+        }
+        let blocks = &self.blocks;
+        let mut tag = [0u8; TAG_BYTES];
+        match TAG_BYTES {
+            16 => tag.copy_from_slice(
+                &blocks[0]
+                    .xor(blocks[1])
+                    .xor(blocks[2])
+                    .xor(blocks[3])
+                    .xor(blocks[4])
+                    .xor(blocks[5])
+                    .to_bytes(),
+            ),
+            32 => {
+                tag[..16].copy_from_slice(&blocks[0].xor(blocks[1]).xor(blocks[2]).to_bytes());
+                tag[16..].copy_from_slice(&blocks[3].xor(blocks[4]).xor(blocks[5]).to_bytes());
+            }
+            _ => unreachable!(),
+        }
+        tag
+    }
 }
 
 /// Tag length in bits must be 128 or 256
@@ -345,6 +378,106 @@ impl<const TAG_BYTES: usize> Aegis256<TAG_BYTES> {
         }
         if acc != 0 {
             mc.fill(0xaa);
+            return Err(Error::InvalidTag);
+        }
+        Ok(())
+    }
+}
+
+/// AEGIS-256 MAC with incremental update support.
+///
+/// The state can be cloned to authenticate multiple messages with the same key.
+///
+/// 256-bit output tags are recommended for security.
+///
+/// Note that AEGIS is not a hash function. It is a MAC that requires a secret key.
+/// Inputs leading to a state collision can be efficiently computed if the key is known.
+#[derive(Clone)]
+pub struct Aegis256Mac<const TAG_BYTES: usize> {
+    state: State,
+    buf: [u8; 16],
+    buf_len: usize,
+    msg_len: usize,
+}
+
+impl<const TAG_BYTES: usize> Aegis256Mac<TAG_BYTES> {
+    /// Initializes the MAC state with a key.
+    ///
+    /// The state can be cloned to authenticate multiple messages with the same key.
+    pub fn new(key: &Key) -> Self {
+        let nonce = [0u8; 32];
+        Self::new_with_nonce(key, &nonce)
+    }
+
+    /// Initializes the MAC state with a key and a nonce.
+    ///
+    /// The state can be cloned to authenticate multiple messages with the same key.
+    pub fn new_with_nonce(key: &Key, nonce: &Nonce) -> Self {
+        assert!(
+            TAG_BYTES == 16 || TAG_BYTES == 32,
+            "Invalid tag length, must be 16 or 32"
+        );
+        Aegis256Mac {
+            state: State::new(key, nonce),
+            buf: [0u8; 16],
+            buf_len: 0,
+            msg_len: 0,
+        }
+    }
+
+    /// Updates the MAC state with a message.
+    ///
+    /// This function can be called multiple times to update the MAC state with additional data.
+    pub fn update(&mut self, data: &[u8]) {
+        self.msg_len += data.len();
+        let mut offset = 0;
+
+        // Process buffered data first
+        if self.buf_len > 0 {
+            let needed = 16 - self.buf_len;
+            if data.len() < needed {
+                self.buf[self.buf_len..self.buf_len + data.len()].copy_from_slice(data);
+                self.buf_len += data.len();
+                return;
+            }
+            self.buf[self.buf_len..].copy_from_slice(&data[..needed]);
+            self.state.absorb(&self.buf);
+            self.buf_len = 0;
+            offset = needed;
+        }
+
+        // Process full blocks
+        while offset + 16 <= data.len() {
+            let mut block = [0u8; 16];
+            block.copy_from_slice(&data[offset..offset + 16]);
+            self.state.absorb(&block);
+            offset += 16;
+        }
+
+        // Buffer remaining
+        if offset < data.len() {
+            self.buf_len = data.len() - offset;
+            self.buf[..self.buf_len].copy_from_slice(&data[offset..]);
+        }
+    }
+
+    /// Finalizes the MAC and returns the authentication tag.
+    pub fn finalize(mut self) -> Tag<TAG_BYTES> {
+        if self.buf_len > 0 || self.msg_len == 0 {
+            self.buf[self.buf_len..].fill(0);
+            self.state.absorb(&self.buf);
+        }
+        self.state.mac_finalize::<TAG_BYTES>(self.msg_len)
+    }
+
+    /// Verifies the authentication tag.
+    pub fn verify(self, expected: &Tag<TAG_BYTES>) -> Result<(), Error> {
+        let tag = self.finalize();
+        let mut acc = 0u8;
+        for (a, b) in tag.iter().zip(expected.iter()) {
+            acc |= a ^ b;
+        }
+        if acc != 0 {
             return Err(Error::InvalidTag);
         }
         Ok(())

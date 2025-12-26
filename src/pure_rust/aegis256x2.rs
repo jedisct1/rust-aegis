@@ -208,6 +208,75 @@ impl State {
         }
         tag
     }
+
+    #[inline(always)]
+    fn mac_finalize<const TAG_BYTES: usize>(&mut self, data_len: usize) -> Tag<TAG_BYTES> {
+        let mut sizes = [0u8; 16];
+        sizes[..8].copy_from_slice(&(data_len as u64 * 8).to_le_bytes());
+        sizes[8..16].copy_from_slice(&(TAG_BYTES as u64 * 8).to_le_bytes());
+        let u = AesBlock::from_bytes(&sizes);
+
+        let (s30, s31) = self.s3.as_blocks();
+        let t0 = s30.xor(u);
+        let t1 = s31.xor(u);
+        let t = AesBlock2::from_blocks(t0, t1);
+
+        for _ in 0..7 {
+            self.update(t);
+        }
+
+        let (_, s01) = self.s0.as_blocks();
+        let (_, s11) = self.s1.as_blocks();
+        let (_, s21) = self.s2.as_blocks();
+        let (_, s31) = self.s3.as_blocks();
+        let (_, s41) = self.s4.as_blocks();
+        let (_, s51) = self.s5.as_blocks();
+
+        let zeros = AesBlock::from_bytes(&[0u8; 16]);
+
+        if TAG_BYTES == 16 {
+            let tag1 = s01.xor(s11).xor(s21).xor(s31).xor(s41).xor(s51);
+            let m = AesBlock2::from_blocks(tag1, zeros);
+            self.update(m);
+        } else {
+            let tag1_lo = s01.xor(s11).xor(s21);
+            let tag1_hi = s31.xor(s41).xor(s51);
+            let m = AesBlock2::from_blocks(tag1_lo, zeros);
+            self.update(m);
+            let m = AesBlock2::from_blocks(tag1_hi, zeros);
+            self.update(m);
+        }
+
+        let (s30, _) = self.s3.as_blocks();
+        let mut extra_sizes = [0u8; 16];
+        extra_sizes[..8].copy_from_slice(&2u64.to_le_bytes());
+        extra_sizes[8..16].copy_from_slice(&(TAG_BYTES as u64 * 8).to_le_bytes());
+        let extra_block = s30.xor(AesBlock::from_bytes(&extra_sizes));
+        let extra = AesBlock2::from_blocks(extra_block, zeros);
+
+        for _ in 0..7 {
+            self.update(extra);
+        }
+
+        let (s00, _) = self.s0.as_blocks();
+        let (s10, _) = self.s1.as_blocks();
+        let (s20, _) = self.s2.as_blocks();
+        let (s30, _) = self.s3.as_blocks();
+        let (s40, _) = self.s4.as_blocks();
+        let (s50, _) = self.s5.as_blocks();
+
+        let mut tag = [0u8; TAG_BYTES];
+        if TAG_BYTES == 16 {
+            let final_tag = s00.xor(s10).xor(s20).xor(s30).xor(s40).xor(s50);
+            tag.copy_from_slice(&final_tag.to_bytes());
+        } else {
+            let final_lo = s00.xor(s10).xor(s20);
+            let final_hi = s30.xor(s40).xor(s50);
+            tag[..16].copy_from_slice(&final_lo.to_bytes());
+            tag[16..].copy_from_slice(&final_hi.to_bytes());
+        }
+        tag
+    }
 }
 
 /// AEGIS-256X2 authenticated encryption
@@ -476,7 +545,7 @@ impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
             self.buf[self.buf_len..].fill(0);
             self.state.absorb(&self.buf);
         }
-        self.state.mac::<TAG_BYTES>(0, self.msg_len)
+        self.state.mac_finalize::<TAG_BYTES>(self.msg_len)
     }
 
     pub fn verify(self, expected: &Tag<TAG_BYTES>) -> Result<(), Error> {

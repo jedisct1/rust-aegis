@@ -439,7 +439,7 @@ mod test_vectors {
     }
 
     #[test]
-    #[cfg(all(feature = "std", not(feature = "pure-rust")))]
+    #[cfg(feature = "std")]
     fn test_aegismac_vectors() {
         use crate::aegis128l::Aegis128LMac;
         use crate::aegis128x2::Aegis128X2Mac;
