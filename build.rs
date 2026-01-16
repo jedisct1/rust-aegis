@@ -22,7 +22,13 @@ fn main() {
         return;
     }
     let mut build = cc::Build::new();
-    if has_clang() {
+    let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+    if target_env == "msvc" {
+        // On MSVC targets, use the cc crate's proper API for preferring clang-cl.
+        // Manually setting compiler("clang") on MSVC targets causes malformed
+        // command lines (the -x flag is generated without its language argument).
+        build.prefer_clang_cl_over_msvc(true);
+    } else if has_clang() {
         build.compiler("clang");
     }
     build
@@ -74,5 +80,5 @@ fn main() {
         .file("src/c/libaegis/src/common/common.c")
         .file("src/c/libaegis/src/common/cpu.c")
         .file("src/c/libaegis/src/common/softaes.c")
-        .compile("aegis_aesni");
+        .compile("aegis");
 }
