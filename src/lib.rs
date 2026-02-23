@@ -4,6 +4,11 @@
 #[cfg(feature = "std")]
 use std::fmt;
 
+#[cfg(all(feature = "raf", feature = "pure-rust"))]
+compile_error!(
+    "The `raf` and `pure-rust` features are mutually exclusive. RAF requires the C backend."
+);
+
 #[cfg(feature = "pure-rust")]
 mod pure_rust;
 #[cfg(feature = "pure-rust")]

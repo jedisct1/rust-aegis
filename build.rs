@@ -79,6 +79,18 @@ fn main() {
         .file("src/c/libaegis/src/aegis256x4/aegis256x4_soft.c")
         .file("src/c/libaegis/src/common/common.c")
         .file("src/c/libaegis/src/common/cpu.c")
-        .file("src/c/libaegis/src/common/softaes.c")
-        .compile("aegis");
+        .file("src/c/libaegis/src/common/softaes.c");
+    if env::var("CARGO_FEATURE_RAF").is_ok() {
+        build
+            .file("src/c/libaegis/src/common/keccak.c")
+            .file("src/c/libaegis/src/raf/raf.c")
+            .file("src/c/libaegis/src/raf/raf_merkle.c")
+            .file("src/c/libaegis/src/raf/raf_aegis128l.c")
+            .file("src/c/libaegis/src/raf/raf_aegis128x2.c")
+            .file("src/c/libaegis/src/raf/raf_aegis128x4.c")
+            .file("src/c/libaegis/src/raf/raf_aegis256.c")
+            .file("src/c/libaegis/src/raf/raf_aegis256x2.c")
+            .file("src/c/libaegis/src/raf/raf_aegis256x4.c");
+    }
+    build.compile("aegis");
 }
