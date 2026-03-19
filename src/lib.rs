@@ -4,7 +4,7 @@
 #[cfg(feature = "std")]
 use std::fmt;
 
-#[cfg(all(feature = "raf", feature = "pure-rust"))]
+#[cfg(all(feature = "raf-core", feature = "pure-rust"))]
 compile_error!(
     "The `raf` and `pure-rust` features are mutually exclusive. RAF requires the C backend."
 );

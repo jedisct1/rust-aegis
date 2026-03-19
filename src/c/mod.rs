@@ -1,4 +1,4 @@
-#[cfg(feature = "raf")]
+#[cfg(feature = "raf-core")]
 pub mod raf;
 
 pub mod aegis128l;

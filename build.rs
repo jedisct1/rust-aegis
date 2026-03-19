@@ -80,7 +80,7 @@ fn main() {
         .file("src/c/libaegis/src/common/common.c")
         .file("src/c/libaegis/src/common/cpu.c")
         .file("src/c/libaegis/src/common/softaes.c");
-    if env::var("CARGO_FEATURE_RAF").is_ok() {
+    if env::var("CARGO_FEATURE_RAF_CORE").is_ok() {
         build
             .file("src/c/libaegis/src/common/keccak.c")
             .file("src/c/libaegis/src/raf/raf.c")

@@ -14,9 +14,9 @@ AEGIS is a new family of authenticated encryption algorithms, offering high secu
 
 - `rustcrypto-traits-06`: add traits from `rust-crypto/aead` version 0.6. Alternative interfaces are available in the `compat` namespace.
 
-- `raf`: encrypted random-access file I/O. Requires `std` and the C backend (incompatible with `pure-rust`). See the [RAF section](#random-access-files-raf) below.
+- `raf`: encrypted random-access file I/O with OS-provided randomness. Requires `std` and the C backend (incompatible with `pure-rust`). See the [RAF section](#random-access-files-raf) below.
 
-- `raf-getrandom`: convenience shorthand for `raf` + `getrandom`. Enables `OsRng` and the file convenience methods.
+- `raf-core`: like `raf` but without `getrandom`. Use this on platforms where OS randomness is unavailable (e.g. freestanding wasm) and supply your own RNG via `RafBuilder::with_rng()`.
 
 - `js`: enables `getrandom` with the `wasm_js` backend for use in `wasm32-unknown-unknown` environments with JavaScript.
 
@@ -46,7 +46,7 @@ f.read(&mut buf, 0).unwrap();
 assert_eq!(&buf, b"hello world");
 ```
 
-The `create_file` and `open_file` convenience methods require the `getrandom` feature (enabled by `raf-getrandom`). Without it, use the builder:
+You can also use the builder API for more control, or to supply a custom RNG on platforms without OS randomness (e.g. freestanding wasm):
 
 ```rust,ignore
 use aegis::raf::{RafBuilder, Aegis128L, FileIo};
@@ -122,9 +122,9 @@ println!("algorithm: {:?}, chunk_size: {}, file_size: {}",
 
 RAF works on WebAssembly targets:
 
-- Freestanding wasm (`wasm32-unknown-unknown` without JS): use `--features raf` and supply a custom `RafRng` via `RafBuilder::with_rng()`.
-- wasm + JavaScript: use `--features raf,js` to get `OsRng` backed by `crypto.getRandomValues`.
-- WASI: use `--features raf-getrandom` for automatic OS-provided randomness.
+- Freestanding wasm (`wasm32-unknown-unknown` without JS): use `--features raf-core` and supply a custom `RafRng` via `RafBuilder::with_rng()`.
+- wasm + JavaScript: use `--features raf-core,js` to get `OsRng` backed by `crypto.getRandomValues`.
+- WASI: use `--features raf` for automatic OS-provided randomness.
 
 # Benchmarks
 

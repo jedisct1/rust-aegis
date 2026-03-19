@@ -1,4 +1,4 @@
-#![cfg(all(feature = "raf", feature = "getrandom", not(feature = "pure-rust")))]
+#![cfg(all(feature = "raf-core", feature = "getrandom", not(feature = "pure-rust")))]
 
 use aegis::raf::{self, Aegis128L, Aegis256, FileIo, Raf, RafBuilder};
 use std::io::{Read, Seek, SeekFrom, Write};
