@@ -23,7 +23,7 @@ fn test_aes256gcm(m: &mut [u8]) {
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
-#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+#[cfg(feature = "boring")]
 fn test_aes256gcm_boringssl(m: &mut [u8]) {
     use boring::symm;
     use symm::Cipher;
@@ -42,7 +42,7 @@ fn test_aes128gcm(m: &mut [u8]) {
     state.encrypt_in_place_detached(nonce, &[], m).unwrap();
 }
 
-#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+#[cfg(feature = "boring")]
 fn test_aes128gcm_boringssl(m: &mut [u8]) {
     use boring::symm;
     use symm::Cipher;
@@ -133,10 +133,7 @@ fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
     state.finalize();
 }
 
-#[cfg(all(
-    not(feature = "pure-rust"),
-    not(any(target_arch = "wasm32", target_arch = "wasm64"))
-))]
+#[cfg(all(not(feature = "pure-rust"), feature = "boring"))]
 fn test_hmac_sha256(m: &[u8]) {
     let md = boring::hash::MessageDigest::sha256();
     let mut h1 = boring::hash::hash(md, m).unwrap().to_vec();
@@ -192,7 +189,7 @@ fn main() {
             res.throughput_bits(m.len() as _)
         );
 
-        #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+        #[cfg(feature = "boring")]
         {
             let res = bench.run(options, || test_hmac_sha256(&m));
             println!(
@@ -258,7 +255,7 @@ fn main() {
         res.throughput_bits(m.len() as _)
     );
 
-    #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+    #[cfg(feature = "boring")]
     {
         let res = bench.run(options, || test_aes128gcm_boringssl(&mut m));
         println!(
@@ -273,7 +270,7 @@ fn main() {
         res.throughput_bits(m.len() as _)
     );
 
-    #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
+    #[cfg(feature = "boring")]
     {
         let res = bench.run(options, || test_aes256gcm_boringssl(&mut m));
         println!(

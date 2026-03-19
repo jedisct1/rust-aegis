@@ -33,12 +33,14 @@ getrandom = { version = "0.3", optional = true }
 paste = { version = "1", optional = true }
 softaes = { version = "0.1", optional = true }
 
-[target."cfg(not(any(target_arch = \"wasm32\", target_arch = \"wasm64\")))".dev-dependencies.boring]
+[target."cfg(not(any(target_arch = \"wasm32\", target_arch = \"wasm64\")))".dependencies.boring]
 version = "5.0.2"
+optional = true
 
 [[bench]]
 name = "benchmark"
 harness = false
+required-features = ["boring"]
 
 [features]
 default = ["std"]
