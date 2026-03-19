@@ -90,3 +90,6 @@ jobs:
 
     - name: Run pure-rust no-std tests
       run: cargo test --no-default-features --features=pure-rust
+
+    - name: Run RAF tests
+      run: cargo test --features=raf-getrandom
