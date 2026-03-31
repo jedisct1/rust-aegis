@@ -9,6 +9,13 @@ fn has_clang() -> bool {
         .unwrap_or(false)
 }
 
+/// Returns true when host and target differ (cross-compilation).
+fn is_cross_compiling() -> bool {
+    let host = env::var("HOST").unwrap_or_default();
+    let target = env::var("TARGET").unwrap_or_default();
+    !host.is_empty() && !target.is_empty() && host != target
+}
+
 fn main() {
     let pure_rust = env::var("CARGO_FEATURE_PURE_RUST").is_ok();
     if pure_rust {
@@ -22,20 +29,28 @@ fn main() {
         return;
     }
     let mut build = cc::Build::new();
+    let cross = is_cross_compiling();
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
     if target_env == "msvc" {
         // On MSVC targets, use the cc crate's proper API for preferring clang-cl.
         // Manually setting compiler("clang") on MSVC targets causes malformed
         // command lines (the -x flag is generated without its language argument).
         build.prefer_clang_cl_over_msvc(true);
-    } else if has_clang() {
+    } else if !cross && has_clang() {
+        // Only force host clang for native builds. When cross-compiling (e.g.
+        // for Android via NDK), let the `cc` crate auto-detect the correct
+        // toolchain from CC_<target> / CFLAGS_<target> environment variables.
         build.compiler("clang");
     }
     build
         .opt_level(3)
         .flag_if_supported("-Wno-unused-command-line-argument")
-        .flag_if_supported("-Wno-unknown-pragmas")
-        .flag_if_supported("-mtune=native")
+        .flag_if_supported("-Wno-unknown-pragmas");
+    if !cross {
+        // -mtune=native is only valid when compiling for the host architecture.
+        build.flag_if_supported("-mtune=native");
+    }
+    build
         .flag_if_supported("-mcrypto")
         .flag_if_supported("-mneon")
         .flag_if_supported("-maes")
