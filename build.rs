@@ -9,7 +9,6 @@ fn has_clang() -> bool {
         .unwrap_or(false)
 }
 
-/// Returns true when host and target differ (cross-compilation).
 fn is_cross_compiling() -> bool {
     let host = env::var("HOST").unwrap_or_default();
     let target = env::var("TARGET").unwrap_or_default();
@@ -47,7 +46,6 @@ fn main() {
         .flag_if_supported("-Wno-unused-command-line-argument")
         .flag_if_supported("-Wno-unknown-pragmas");
     if !cross {
-        // -mtune=native is only valid when compiling for the host architecture.
         build.flag_if_supported("-mtune=native");
     }
     build
