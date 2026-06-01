@@ -65,3 +65,7 @@ js = ["getrandom", "getrandom/wasm_js"]
 codegen-units = 1
 incremental = false
 panic = "abort"
+
+[package.metadata.docs.rs]
+features = ["raf"]
+rustdoc-args = ["--cfg", "docsrs"]
