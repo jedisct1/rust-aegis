@@ -4,7 +4,7 @@
     not(feature = "pure-rust")
 ))]
 
-use aegis::raf::{self, Aegis128L, Aegis256, FileIo, Raf, RafBuilder};
+use aegis::raf::{self, derive_key, Aegis128L, Aegis256, FileIo, Raf, RafBuilder};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 fn tmp_path(name: &str) -> std::path::PathBuf {
@@ -93,6 +93,61 @@ fn derive_master_key_properties_and_limits() {
             "unexpected 256-bit result for too-long context: {:?}",
             other
         ),
+    }
+}
+
+#[test]
+fn derive_key_matches_algorithm_bound_form() {
+    let key16 = [0x42u8; 16];
+    let key32 = [0x24u8; 32];
+
+    let generic16 = derive_key(&key16, b"ctx").unwrap();
+    let bound16 = Raf::<Aegis128L>::derive_master_key(&key16, b"ctx").unwrap();
+    assert_eq!(generic16, bound16);
+
+    let generic32 = derive_key(&key32, b"ctx").unwrap();
+    let bound32 = Raf::<Aegis256>::derive_master_key(&key32, b"ctx").unwrap();
+    assert_eq!(generic32, bound32);
+}
+
+#[test]
+fn derive_key_known_answers_and_limits() {
+    let master16 = [
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+        0x0f,
+    ];
+    let expected16 = [
+        0xfb, 0x80, 0x07, 0x2c, 0x5a, 0x6f, 0x1c, 0xdd, 0xc6, 0xe9, 0x7b, 0x35, 0xed, 0x1f, 0x3b,
+        0xf3,
+    ];
+    assert_eq!(derive_key(&master16, b"test-context").unwrap(), expected16);
+
+    derive_key(&master16, &[0u8; 120]).unwrap();
+    match derive_key(&master16, &[0u8; 121]) {
+        Err(raf::Error::InvalidArgument("context too long")) => {}
+        other => panic!(
+            "unexpected 16-byte result for too-long context: {:?}",
+            other
+        ),
+    }
+
+    let master32 = [0x24u8; 32];
+    derive_key(&master32, &[0u8; 72]).unwrap();
+    match derive_key(&master32, &[0u8; 73]) {
+        Err(raf::Error::InvalidArgument("context too long")) => {}
+        other => panic!(
+            "unexpected 32-byte result for too-long context: {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn derive_key_rejects_invalid_length() {
+    let bad = [0u8; 24];
+    match derive_key(&bad, b"ctx") {
+        Err(raf::Error::InvalidArgument("key length must be 16 or 32 bytes")) => {}
+        other => panic!("unexpected result for 24-byte key: {:?}", other),
     }
 }
 

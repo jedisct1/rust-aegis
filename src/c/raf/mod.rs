@@ -4,6 +4,7 @@ mod errno;
 mod error;
 mod ffi;
 mod io;
+mod kdf;
 mod merkle;
 mod rng;
 mod scratch;
@@ -17,6 +18,7 @@ pub use algorithm::{Aegis128L, Aegis128X2, Aegis128X4, Aegis256, Aegis256X2, Aeg
 pub use context::{Raf, RafBuilder};
 pub use error::Error;
 pub use io::{FileIo, RafIo};
+pub use kdf::derive_key;
 pub use merkle::MerkleHasher;
 #[cfg(feature = "getrandom")]
 pub use rng::OsRng;

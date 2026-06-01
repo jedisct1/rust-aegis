@@ -87,6 +87,17 @@ still derives a RAF-scoped key; it is not a pass-through of the master key.
 Contexts are limited to 120 bytes for 128-bit variants and 72 bytes for 256-bit
 variants.
 
+When you do not have an algorithm in hand, `derive_key` performs the same
+derivation parameterized only by the key length (16 or 32 bytes), inferred from
+the master key:
+
+```rust,ignore
+use aegis::raf::derive_key;
+
+let master_key = [0u8; 32];
+let key = derive_key(&master_key, b"my-app/files").unwrap();
+```
+
 ## Builder options
 
 `RafBuilder` controls file creation and opening:
