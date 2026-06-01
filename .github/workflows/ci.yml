@@ -8,8 +8,13 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    name: Build (${{ matrix.os }} / ${{ matrix.compiler }})
     strategy:
       matrix:
         include:
