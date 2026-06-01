@@ -85,6 +85,14 @@ extern "C" {
 
     pub fn aegis_raf_probe(io: *const aegis_raf_io, info: *mut aegis_raf_info) -> c_int;
     pub fn aegis_raf_merkle_buffer_size(cfg: *const aegis_raf_merkle_config) -> usize;
+    pub fn aegis_raf_derive_master_key(
+        out: *mut u8,
+        out_len: usize,
+        master_key: *const u8,
+        master_key_len: usize,
+        context: *const u8,
+        context_len: usize,
+    ) -> c_int;
 }
 
 macro_rules! declare_raf_ffi {

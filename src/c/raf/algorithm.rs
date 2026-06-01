@@ -55,11 +55,13 @@ mod sealed {
 /// [`Aegis128X4`], [`Aegis256`], [`Aegis256X2`], and [`Aegis256X4`], and is used
 /// as the type parameter of [`Raf`](super::Raf) and [`RafBuilder`](super::RafBuilder)
 /// to select the cipher. It is sealed and cannot be implemented outside this crate;
-/// the only members of interest to callers are [`Key`](Algorithm::Key) and
-/// [`ALG_ID`](Algorithm::ALG_ID).
+/// the members of interest to callers are [`Key`](Algorithm::Key),
+/// [`KEY_LEN`](Algorithm::KEY_LEN), and [`ALG_ID`](Algorithm::ALG_ID).
 pub trait Algorithm: Sealed {
     /// The key type for this variant: `[u8; 16]` for the 128-bit family, `[u8; 32]` for the 256-bit family.
-    type Key: AsRef<[u8]>;
+    type Key: AsRef<[u8]> + AsMut<[u8]> + Default;
+    /// The length in bytes of keys for this variant.
+    const KEY_LEN: usize;
     /// The numeric identifier stored in a RAF file header to record this variant.
     const ALG_ID: u8;
 }
@@ -71,6 +73,7 @@ macro_rules! impl_algorithm {
 
         impl Algorithm for $name {
             type Key = [u8; $key_len];
+            const KEY_LEN: usize = $key_len;
             const ALG_ID: u8 = $alg_id;
         }
 

@@ -99,6 +99,7 @@ fn main() {
         build
             .file("src/c/libaegis/src/common/keccak.c")
             .file("src/c/libaegis/src/raf/raf.c")
+            .file("src/c/libaegis/src/raf/raf_kdf.c")
             .file("src/c/libaegis/src/raf/raf_merkle.c")
             .file("src/c/libaegis/src/raf/raf_aegis128l.c")
             .file("src/c/libaegis/src/raf/raf_aegis128x2.c")

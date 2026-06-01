@@ -34,7 +34,8 @@ All six AEGIS variants are available: `Aegis128L`, `Aegis128X2`, `Aegis128X4`, `
 use aegis::raf::{Raf, Aegis256};
 
 // Create a new encrypted file
-let key = [0u8; 32];
+let master_key = [0u8; 32];
+let key = Raf::<Aegis256>::derive_master_key(&master_key, b"my-app/files").unwrap();
 let mut f = Raf::<Aegis256>::create_file("data.raf", &key).unwrap();
 f.write(b"hello world", 0).unwrap();
 drop(f);
@@ -68,6 +69,23 @@ let mut f = RafBuilder::<Aegis128L>::with_rng(MyRng)
     .create(io, &key)
     .unwrap();
 ```
+
+## Context-bound keys
+
+If an application has a long-lived master key, derive a RAF key for each file or
+file family instead of reusing the raw master key directly:
+
+```rust,ignore
+use aegis::raf::{Aegis128L, Raf};
+
+let master_key = [0u8; 16];
+let key = Raf::<Aegis128L>::derive_master_key(&master_key, b"my-app/files").unwrap();
+```
+
+Different contexts produce independent keys. An empty context is allowed and
+still derives a RAF-scoped key; it is not a pass-through of the master key.
+Contexts are limited to 120 bytes for 128-bit variants and 72 bytes for 256-bit
+variants.
 
 ## Builder options
 

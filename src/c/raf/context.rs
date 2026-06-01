@@ -50,6 +50,57 @@ impl<A: Algorithm> Raf<A> {
         self.ctx.opaque.as_ptr()
     }
 
+    /// Derives a context-bound RAF key from an application master key.
+    ///
+    /// Different contexts with the same `master_key` produce independent RAF
+    /// keys, so distinct files or file families can be isolated without
+    /// managing separate master keys. An empty `context` is valid and still
+    /// derives a RAF-scoped key; it is not a pass-through of `master_key`.
+    ///
+    /// `context` must not exceed 120 bytes for the 128-bit variants or 72 bytes
+    /// for the 256-bit variants. The returned key is ordinary key material owned
+    /// by the caller; clear or zeroize it after use if your application requires
+    /// that.
+    pub fn derive_master_key(master_key: &A::Key, context: &[u8]) -> Result<A::Key, Error> {
+        ensure_init();
+
+        let max_context_len = match A::KEY_LEN {
+            16 => 120,
+            32 => 72,
+            _ => return Err(Error::InvalidArgument("invalid key length")),
+        };
+        if context.len() > max_context_len {
+            return Err(Error::InvalidArgument("context too long"));
+        }
+
+        let mut out = A::Key::default();
+
+        debug_assert_eq!(master_key.as_ref().len(), A::KEY_LEN);
+        debug_assert_eq!(out.as_mut().len(), A::KEY_LEN);
+
+        let context_ptr = if context.is_empty() {
+            core::ptr::null()
+        } else {
+            context.as_ptr()
+        };
+
+        let ret = unsafe {
+            ffi::aegis_raf_derive_master_key(
+                out.as_mut().as_mut_ptr(),
+                A::KEY_LEN,
+                master_key.as_ref().as_ptr(),
+                A::KEY_LEN,
+                context_ptr,
+                context.len(),
+            )
+        };
+        if ret != 0 {
+            return Err(error::map_errno_derive());
+        }
+
+        Ok(out)
+    }
+
     /// Reads decrypted bytes into `buf` starting at plaintext `offset`.
     ///
     /// Returns the number of bytes read, which may be fewer than requested if

@@ -68,6 +68,14 @@ pub(crate) fn map_errno_create() -> Error {
     }
 }
 
+pub(crate) fn map_errno_derive() -> Error {
+    let e = std::io::Error::last_os_error();
+    match e.kind() {
+        ErrorKind::InvalidInput => Error::InvalidArgument("invalid key length or context"),
+        _ => Error::Io(e),
+    }
+}
+
 pub(crate) fn map_errno_open() -> Error {
     let e = std::io::Error::last_os_error();
     match e.raw_os_error() {
