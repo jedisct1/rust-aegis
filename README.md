@@ -136,12 +136,12 @@ For performance, `clang` is recommended over `gcc`.
 
 ## Encryption (16 KB)
 
-![AEGIS benchmark results](img/bench-encryption.png)
+![AEGIS benchmark results](https://raw.githubusercontent.com/jedisct1/rust-aegis/master/img/bench-encryption.png)
 
 ## Authentication (64 KB)
 
-![AEGIS-MAC benchmark results](img/bench-mac.png)
+![AEGIS-MAC benchmark results](https://raw.githubusercontent.com/jedisct1/rust-aegis/master/img/bench-mac.png)
 
 ### Mobile benchmarks
 
-![AEGIS mobile benchmark results](img/bench-mobile.png)
+![AEGIS mobile benchmark results](https://raw.githubusercontent.com/jedisct1/rust-aegis/master/img/bench-mobile.png)
