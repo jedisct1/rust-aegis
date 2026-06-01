@@ -2,8 +2,51 @@ use core::ffi::c_int;
 
 use super::ffi;
 
+use sealed::Sealed;
+
 mod sealed {
-    pub trait Sealed {}
+    use core::ffi::c_int;
+
+    use super::super::ffi;
+
+    pub trait Sealed {
+        unsafe fn ffi_scratch_size(chunk_size: u32) -> usize;
+        unsafe fn ffi_create(
+            ctx: *mut u8,
+            io: *const ffi::aegis_raf_io,
+            rng: *const ffi::aegis_raf_rng,
+            cfg: *const ffi::aegis_raf_config,
+            key: *const u8,
+        ) -> c_int;
+        unsafe fn ffi_open(
+            ctx: *mut u8,
+            io: *const ffi::aegis_raf_io,
+            rng: *const ffi::aegis_raf_rng,
+            cfg: *const ffi::aegis_raf_config,
+            key: *const u8,
+        ) -> c_int;
+        unsafe fn ffi_read(
+            ctx: *mut u8,
+            out: *mut u8,
+            bytes_read: *mut usize,
+            len: usize,
+            offset: u64,
+        ) -> c_int;
+        unsafe fn ffi_write(
+            ctx: *mut u8,
+            bytes_written: *mut usize,
+            data: *const u8,
+            len: usize,
+            offset: u64,
+        ) -> c_int;
+        unsafe fn ffi_truncate(ctx: *mut u8, size: u64) -> c_int;
+        unsafe fn ffi_get_size(ctx: *const u8, size: *mut u64) -> c_int;
+        unsafe fn ffi_sync(ctx: *mut u8) -> c_int;
+        unsafe fn ffi_close(ctx: *mut u8);
+        unsafe fn ffi_merkle_rebuild(ctx: *mut u8) -> c_int;
+        unsafe fn ffi_merkle_verify(ctx: *mut u8, corrupted: *mut u64) -> c_int;
+        unsafe fn ffi_merkle_commitment(ctx: *const u8, out: *mut u8, len: usize) -> c_int;
+    }
 }
 
 /// An AEGIS variant usable with the random-access file (RAF) API.
@@ -13,62 +56,12 @@ mod sealed {
 /// as the type parameter of [`Raf`](super::Raf) and [`RafBuilder`](super::RafBuilder)
 /// to select the cipher. It is sealed and cannot be implemented outside this crate;
 /// the only members of interest to callers are [`Key`](Algorithm::Key) and
-/// [`ALG_ID`](Algorithm::ALG_ID). The remaining methods are low-level FFI bindings
-/// and are hidden from the documentation.
-pub trait Algorithm: sealed::Sealed {
+/// [`ALG_ID`](Algorithm::ALG_ID).
+pub trait Algorithm: Sealed {
     /// The key type for this variant: `[u8; 16]` for the 128-bit family, `[u8; 32]` for the 256-bit family.
     type Key: AsRef<[u8]>;
     /// The numeric identifier stored in a RAF file header to record this variant.
     const ALG_ID: u8;
-
-    #[doc(hidden)]
-    unsafe fn ffi_scratch_size(chunk_size: u32) -> usize;
-    #[doc(hidden)]
-    unsafe fn ffi_create(
-        ctx: *mut u8,
-        io: *const ffi::aegis_raf_io,
-        rng: *const ffi::aegis_raf_rng,
-        cfg: *const ffi::aegis_raf_config,
-        key: *const u8,
-    ) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_open(
-        ctx: *mut u8,
-        io: *const ffi::aegis_raf_io,
-        rng: *const ffi::aegis_raf_rng,
-        cfg: *const ffi::aegis_raf_config,
-        key: *const u8,
-    ) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_read(
-        ctx: *mut u8,
-        out: *mut u8,
-        bytes_read: *mut usize,
-        len: usize,
-        offset: u64,
-    ) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_write(
-        ctx: *mut u8,
-        bytes_written: *mut usize,
-        data: *const u8,
-        len: usize,
-        offset: u64,
-    ) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_truncate(ctx: *mut u8, size: u64) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_get_size(ctx: *const u8, size: *mut u64) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_sync(ctx: *mut u8) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_close(ctx: *mut u8);
-    #[doc(hidden)]
-    unsafe fn ffi_merkle_rebuild(ctx: *mut u8) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_merkle_verify(ctx: *mut u8, corrupted: *mut u64) -> c_int;
-    #[doc(hidden)]
-    unsafe fn ffi_merkle_commitment(ctx: *const u8, out: *mut u8, len: usize) -> c_int;
 }
 
 macro_rules! impl_algorithm {
@@ -76,12 +69,12 @@ macro_rules! impl_algorithm {
         #[doc = concat!("Marker type selecting ", stringify!($name), " for the RAF API.")]
         pub struct $name;
 
-        impl sealed::Sealed for $name {}
-
         impl Algorithm for $name {
             type Key = [u8; $key_len];
             const ALG_ID: u8 = $alg_id;
+        }
 
+        impl Sealed for $name {
             unsafe fn ffi_scratch_size(chunk_size: u32) -> usize {
                 pastey::paste! { ffi::[<$prefix _raf_scratch_size>](chunk_size) }
             }
