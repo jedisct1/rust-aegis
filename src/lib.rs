@@ -16,8 +16,10 @@ mod pure_rust;
 pub use pure_rust::*;
 
 #[cfg(not(feature = "pure-rust"))]
+#[cfg_attr(docsrs, doc(cfg(all())))]
 mod c;
 #[cfg(not(feature = "pure-rust"))]
+#[cfg_attr(docsrs, doc(cfg(all())))]
 pub use c::*;
 
 /// Errors returned by the AEGIS encryption and authentication functions.

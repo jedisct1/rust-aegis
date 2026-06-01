@@ -1,5 +1,6 @@
 /// Encrypted random-access file I/O built on top of the AEGIS ciphers.
 #[cfg(feature = "raf-core")]
+#[cfg_attr(docsrs, doc(cfg(feature = "raf")))]
 pub mod raf;
 
 /// AEGIS-128L.
