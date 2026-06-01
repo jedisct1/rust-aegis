@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "0.9.7"
+version = "0.9.8"
 edition = "2018"
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "AEGIS authenticated ciphers (AEGIS-128, AEGIS-256, AEGIS-128X, AEGIS-256X)"
@@ -10,6 +10,16 @@ homepage = "https://github.com/jedisct1/rust-aegis"
 repository = "https://github.com/jedisct1/rust-aegis"
 categories = ["no-std", "cryptography"]
 readme = "README.md"
+include = [
+    "/build.rs",
+    "/README.md",
+    "/LICENSE",
+    "/src/**/*.rs",
+    "/src/test-vectors/*.json",
+    "/src/c/libaegis/src/**/*.c",
+    "/src/c/libaegis/src/**/*.h",
+    "/wasm-libs/*.a",
+]
 
 [target."cfg(not(any(all(target_arch = \"aarch64\", target_feature = \"aes\"),all(target_arch = \"x86_64\", target_feature = \"aes\"),all(target_arch = \"x86\", target_feature = \"aes\"))))".dependencies.softaes]
 version = "0.1"
