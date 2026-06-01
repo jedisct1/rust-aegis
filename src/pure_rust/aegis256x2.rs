@@ -492,11 +492,17 @@ pub struct Aegis256X2Mac<const TAG_BYTES: usize> {
 }
 
 impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
+    /// Initializes the MAC state with a key.
+    ///
+    /// The state can be cloned to authenticate multiple messages with the same key.
     pub fn new(key: &Key) -> Self {
         let nonce = [0u8; 32];
         Self::new_with_nonce(key, &nonce)
     }
 
+    /// Initializes the MAC state with a key and a nonce.
+    ///
+    /// The state can be cloned to authenticate multiple messages with the same key.
     pub fn new_with_nonce(key: &Key, nonce: &Nonce) -> Self {
         Aegis256X2Mac {
             state: State::new(key, nonce),
@@ -506,6 +512,9 @@ impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
         }
     }
 
+    /// Updates the MAC state with a message.
+    ///
+    /// This function can be called multiple times to update the MAC state with additional data.
     pub fn update(&mut self, data: &[u8]) {
         self.msg_len += data.len();
         let mut offset = 0;
@@ -539,6 +548,7 @@ impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
         }
     }
 
+    /// Finalizes the MAC and returns the authentication tag.
     pub fn finalize(mut self) -> Tag<TAG_BYTES> {
         // Pad and absorb final block
         if self.buf_len > 0 || self.msg_len == 0 {
@@ -548,6 +558,7 @@ impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
         self.state.mac_finalize::<TAG_BYTES>(self.msg_len)
     }
 
+    /// Verifies the authentication tag.
     pub fn verify(self, expected: &Tag<TAG_BYTES>) -> Result<(), Error> {
         let tag = self.finalize();
         let mut acc = 0u8;

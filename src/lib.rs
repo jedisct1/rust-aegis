@@ -20,8 +20,11 @@ mod c;
 #[cfg(not(feature = "pure-rust"))]
 pub use c::*;
 
+/// Errors returned by the AEGIS encryption and authentication functions.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Error {
+    /// The authentication tag did not match: the ciphertext or associated data
+    /// has been altered, or the wrong key or nonce was used.
     InvalidTag,
 }
 
@@ -37,6 +40,7 @@ impl fmt::Display for Error {
 #[cfg(feature = "std")]
 impl std::error::Error for Error {}
 
+/// Implementations of third-party crate traits for the AEGIS ciphers.
 pub mod compat;
 
 #[cfg(test)]

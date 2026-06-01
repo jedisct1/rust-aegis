@@ -6,11 +6,24 @@ mod sealed {
     pub trait Sealed {}
 }
 
+/// An AEGIS variant usable with the random-access file (RAF) API.
+///
+/// This trait is implemented for the marker types [`Aegis128L`], [`Aegis128X2`],
+/// [`Aegis128X4`], [`Aegis256`], [`Aegis256X2`], and [`Aegis256X4`], and is used
+/// as the type parameter of [`Raf`](super::Raf) and [`RafBuilder`](super::RafBuilder)
+/// to select the cipher. It is sealed and cannot be implemented outside this crate;
+/// the only members of interest to callers are [`Key`](Algorithm::Key) and
+/// [`ALG_ID`](Algorithm::ALG_ID). The remaining methods are low-level FFI bindings
+/// and are hidden from the documentation.
 pub trait Algorithm: sealed::Sealed {
+    /// The key type for this variant: `[u8; 16]` for the 128-bit family, `[u8; 32]` for the 256-bit family.
     type Key: AsRef<[u8]>;
+    /// The numeric identifier stored in a RAF file header to record this variant.
     const ALG_ID: u8;
 
+    #[doc(hidden)]
     unsafe fn ffi_scratch_size(chunk_size: u32) -> usize;
+    #[doc(hidden)]
     unsafe fn ffi_create(
         ctx: *mut u8,
         io: *const ffi::aegis_raf_io,
@@ -18,6 +31,7 @@ pub trait Algorithm: sealed::Sealed {
         cfg: *const ffi::aegis_raf_config,
         key: *const u8,
     ) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_open(
         ctx: *mut u8,
         io: *const ffi::aegis_raf_io,
@@ -25,6 +39,7 @@ pub trait Algorithm: sealed::Sealed {
         cfg: *const ffi::aegis_raf_config,
         key: *const u8,
     ) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_read(
         ctx: *mut u8,
         out: *mut u8,
@@ -32,6 +47,7 @@ pub trait Algorithm: sealed::Sealed {
         len: usize,
         offset: u64,
     ) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_write(
         ctx: *mut u8,
         bytes_written: *mut usize,
@@ -39,17 +55,25 @@ pub trait Algorithm: sealed::Sealed {
         len: usize,
         offset: u64,
     ) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_truncate(ctx: *mut u8, size: u64) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_get_size(ctx: *const u8, size: *mut u64) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_sync(ctx: *mut u8) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_close(ctx: *mut u8);
+    #[doc(hidden)]
     unsafe fn ffi_merkle_rebuild(ctx: *mut u8) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_merkle_verify(ctx: *mut u8, corrupted: *mut u64) -> c_int;
+    #[doc(hidden)]
     unsafe fn ffi_merkle_commitment(ctx: *const u8, out: *mut u8, len: usize) -> c_int;
 }
 
 macro_rules! impl_algorithm {
     ($name:ident, $key_len:literal, $alg_id:literal, $prefix:ident, $ctx:ident) => {
+        #[doc = concat!("Marker type selecting ", stringify!($name), " for the RAF API.")]
         pub struct $name;
 
         impl sealed::Sealed for $name {}

@@ -1,3 +1,5 @@
+//! Build script that compiles the bundled libaegis C sources for the native backend.
+
 use std::env;
 use std::process::Command;
 

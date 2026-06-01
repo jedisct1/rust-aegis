@@ -75,7 +75,7 @@ static INITIALIZED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicB
 #[cfg(not(feature = "std"))]
 static INITIALIZING: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
 
-/// in bytes must be 16 (128 bits) or 32 (256 bits)gth in bits must be 128 or 256
+/// Tag length in bytes must be 16 (128 bits) or 32 (256 bits)
 #[derive(Copy, Clone, Debug)]
 pub struct Aegis256X2<const TAG_BYTES: usize> {
     key: Key,
@@ -111,10 +111,16 @@ impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
         }
     }
 
+    /// Creates a new AEGIS-256X2 instance from a key and a nonce.
+    ///
+    /// `key` and `nonce` must be 32 bytes long.
+    ///
+    /// # Panics
+    /// Panics if `TAG_BYTES` is not 16 or 32.
     pub fn new(key: &Key, nonce: &Nonce) -> Self {
         assert!(
             TAG_BYTES == 16 || TAG_BYTES == 32,
-            "Invalid in bytes must be 16 (128 bits) or 32 (256 bits)gth, must be 16 or 32"
+            "Invalid tag length, must be 16 or 32"
         );
         Self::ensure_init();
         Aegis256X2 {
@@ -290,7 +296,7 @@ impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
     pub fn new(key: &Key) -> Self {
         assert!(
             TAG_BYTES == 16 || TAG_BYTES == 32,
-            "Invalid in bytes must be 16 (128 bits) or 32 (256 bits)gth, must be 16 or 32"
+            "Invalid tag length, must be 16 or 32"
         );
         Self::ensure_init();
         let mut st = MaybeUninit::<aegis256x2_mac_state>::uninit();
@@ -308,7 +314,7 @@ impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
     pub fn new_with_nonce(key: &Key, npub: &Nonce) -> Self {
         assert!(
             TAG_BYTES == 16 || TAG_BYTES == 32,
-            "Invalid in bytes must be 16 (128 bits) or 32 (256 bits)gth, must be 16 or 32"
+            "Invalid tag length, must be 16 or 32"
         );
         Self::ensure_init();
         let mut st = MaybeUninit::<aegis256x2_mac_state>::uninit();

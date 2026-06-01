@@ -4,6 +4,9 @@ use aead::consts::*;
 use aead::*;
 use inout::InOutBuf;
 
+/// AEGIS-128L exposed through the RustCrypto `aead` 0.6 traits.
+///
+/// `TAG_BYTES` must be 16 or 32. The key is 16 bytes.
 pub struct Aegis128L<const TAG_BYTES: usize> {
     key: Array<u8, U16>,
 }

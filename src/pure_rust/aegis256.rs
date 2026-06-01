@@ -193,7 +193,7 @@ pub type Tag<const TAG_BYTES: usize> = [u8; TAG_BYTES];
 
 impl<const TAG_BYTES: usize> Aegis256<TAG_BYTES> {
     /// Create a new AEAD instance.
-    /// `key` and `nonce` must be 16 bytes long.
+    /// `key` and `nonce` must be 32 bytes long.
     pub fn new(key: &Key, nonce: &Nonce) -> Self {
         assert!(
             TAG_BYTES == 16 || TAG_BYTES == 32,

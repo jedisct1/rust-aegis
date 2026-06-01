@@ -29,14 +29,24 @@ fn ensure_init() {
     INIT.call_once(|| assert_eq!(unsafe { ffi::aegis_init() }, 0));
 }
 
+/// Identifier of the AEGIS variant a RAF file was created with.
+///
+/// The identifier is stored in the file header so that [`probe`] can report
+/// which algorithm a file uses before it is opened.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum AlgorithmId {
+    /// AEGIS-128L.
     Aegis128L = 1,
+    /// AEGIS-128X2.
     Aegis128X2 = 2,
+    /// AEGIS-128X4.
     Aegis128X4 = 3,
+    /// AEGIS-256.
     Aegis256 = 4,
+    /// AEGIS-256X2.
     Aegis256X2 = 5,
+    /// AEGIS-256X4.
     Aegis256X4 = 6,
 }
 
@@ -54,13 +64,22 @@ impl AlgorithmId {
     }
 }
 
+/// Metadata read from a RAF file header by [`probe`].
 #[derive(Debug, Clone)]
 pub struct RafInfo {
+    /// The AEGIS variant the file was created with.
     pub algorithm: AlgorithmId,
+    /// Size in bytes of each encrypted chunk.
     pub chunk_size: u32,
+    /// Logical size in bytes of the plaintext stored in the file.
     pub file_size: u64,
 }
 
+/// Reads the header of a RAF file and reports its algorithm, chunk size, and logical size.
+///
+/// This does not require the key and does not authenticate any data; it only
+/// parses the unencrypted header so a caller can pick the matching algorithm
+/// before opening the file.
 pub fn probe(io: &mut dyn RafIo) -> Result<RafInfo, Error> {
     ensure_init();
     let mut shim = trampoline::IoShim::new_dyn(io);
@@ -83,11 +102,19 @@ pub fn probe(io: &mut dyn RafIo) -> Result<RafInfo, Error> {
 
 #[cfg(feature = "getrandom")]
 impl<A: Algorithm> Raf<A> {
+    /// Creates (or truncates) an encrypted file at `path` and returns a handle to it.
+    ///
+    /// Uses the operating system RNG and the default chunk size. For finer
+    /// control over chunk size, the RNG, or Merkle integrity, use [`RafBuilder`].
     pub fn create_file(path: impl AsRef<std::path::Path>, key: &A::Key) -> Result<Self, Error> {
         let io = FileIo::create(path)?;
         RafBuilder::<A>::new().truncate(true).create(io, key)
     }
 
+    /// Opens an existing encrypted file at `path` and returns a handle to it.
+    ///
+    /// The algorithm `A` must match the one the file was created with, otherwise
+    /// an error is returned. For finer control, use [`RafBuilder`].
     pub fn open_file(path: impl AsRef<std::path::Path>, key: &A::Key) -> Result<Self, Error> {
         let io = FileIo::open(path)?;
         RafBuilder::<A>::new().open(io, key)

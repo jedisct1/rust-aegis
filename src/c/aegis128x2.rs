@@ -112,6 +112,12 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         }
     }
 
+    /// Creates a new AEGIS-128X2 instance from a key and a nonce.
+    ///
+    /// `key` and `nonce` must be 16 bytes long.
+    ///
+    /// # Panics
+    /// Panics if `TAG_BYTES` is not 16 or 32.
     pub fn new(key: &Key, nonce: &Nonce) -> Self {
         assert!(
             TAG_BYTES == 16 || TAG_BYTES == 32,

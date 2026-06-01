@@ -3,16 +3,27 @@ use std::io::ErrorKind;
 
 use super::errno::{EBADMSG, EOVERFLOW};
 
+/// Errors returned by the random-access file (RAF) API.
 #[derive(Debug)]
 pub enum Error {
+    /// An underlying I/O operation failed.
     Io(std::io::Error),
+    /// A supplied argument or file header was invalid; the message gives details.
     InvalidArgument(&'static str),
+    /// A chunk or header failed authentication: the data was tampered with, or
+    /// the wrong key was used.
     AuthenticationFailed,
+    /// The file already exists and creation was requested without truncation.
     AlreadyExists,
+    /// The file does not exist.
     NotFound,
+    /// An offset or size computation overflowed the addressable range.
     Overflow,
+    /// A Merkle tree operation was requested on a file opened without one.
     MerkleNotEnabled,
+    /// Merkle verification found a corrupted chunk, identified by its index.
     CorruptedChunk(u64),
+    /// The random number generator failed to produce bytes.
     Rng,
 }
 

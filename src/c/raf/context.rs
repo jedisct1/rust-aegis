@@ -22,6 +22,15 @@ struct RafCtxStorage {
     opaque: [u8; 512],
 }
 
+/// An open encrypted random-access file.
+///
+/// A `Raf` wraps a [`RafIo`] backing store and exposes encrypted reads and
+/// writes at arbitrary byte offsets. Each chunk is encrypted and authenticated
+/// independently, so neither reads nor writes require touching the whole file.
+/// Create one with [`RafBuilder`], or with the convenience constructors
+/// [`Raf::create_file`] / [`Raf::open_file`] when the `getrandom` feature is enabled.
+///
+/// The type parameter `A` selects the AEGIS variant (see [`Algorithm`]).
 pub struct Raf<A: Algorithm> {
     ctx: Box<RafCtxStorage>,
     _scratch: ScratchBuf,
@@ -41,6 +50,11 @@ impl<A: Algorithm> Raf<A> {
         self.ctx.opaque.as_ptr()
     }
 
+    /// Reads decrypted bytes into `buf` starting at plaintext `offset`.
+    ///
+    /// Returns the number of bytes read, which may be fewer than requested if
+    /// the end of the file is reached. Each touched chunk is authenticated, so
+    /// tampering is reported as [`Error::AuthenticationFailed`].
     pub fn read(&mut self, buf: &mut [u8], offset: u64) -> Result<usize, Error> {
         let mut bytes_read: usize = 0;
         let ret = unsafe {
@@ -58,6 +72,10 @@ impl<A: Algorithm> Raf<A> {
         Ok(bytes_read)
     }
 
+    /// Encrypts `data` and writes it starting at plaintext `offset`.
+    ///
+    /// Writing past the current end of the file extends it. Returns the number
+    /// of bytes written.
     pub fn write(&mut self, data: &[u8], offset: u64) -> Result<usize, Error> {
         let mut bytes_written: usize = 0;
         let ret = unsafe {
@@ -75,6 +93,9 @@ impl<A: Algorithm> Raf<A> {
         Ok(bytes_written)
     }
 
+    /// Sets the logical (plaintext) length of the file to `size` bytes.
+    ///
+    /// Shrinking discards trailing data; growing zero-extends the plaintext.
     pub fn truncate(&mut self, size: u64) -> Result<(), Error> {
         let ret = unsafe { A::ffi_truncate(self.ctx_ptr(), size) };
         if ret != 0 {
@@ -83,12 +104,14 @@ impl<A: Algorithm> Raf<A> {
         Ok(())
     }
 
+    /// Returns the current logical (plaintext) size of the file in bytes.
     pub fn size(&self) -> u64 {
         let mut size: u64 = 0;
         unsafe { A::ffi_get_size(self.ctx_ptr_const(), &mut size) };
         size
     }
 
+    /// Flushes pending writes and file metadata to the backing store.
     pub fn sync(&mut self) -> Result<(), Error> {
         let ret = unsafe { A::ffi_sync(self.ctx_ptr()) };
         if ret != 0 {
@@ -97,6 +120,10 @@ impl<A: Algorithm> Raf<A> {
         Ok(())
     }
 
+    /// Recomputes the entire Merkle tree from the current file contents.
+    ///
+    /// Requires the file to have been opened with a Merkle hasher; otherwise
+    /// returns [`Error::MerkleNotEnabled`].
     pub fn merkle_rebuild(&mut self) -> Result<(), Error> {
         let ret = unsafe { A::ffi_merkle_rebuild(self.ctx_ptr()) };
         if ret != 0 {
@@ -105,6 +132,11 @@ impl<A: Algorithm> Raf<A> {
         Ok(())
     }
 
+    /// Verifies the whole file against its Merkle tree.
+    ///
+    /// Returns `Ok(None)` when every chunk verifies, or `Ok(Some(index))` with
+    /// the index of the first corrupted chunk. Requires the file to have been
+    /// opened with a Merkle hasher; otherwise returns [`Error::MerkleNotEnabled`].
     pub fn merkle_verify(&mut self) -> Result<Option<u64>, Error> {
         let mut corrupted: u64 = 0;
         let ret = unsafe { A::ffi_merkle_verify(self.ctx_ptr(), &mut corrupted) };
@@ -118,6 +150,12 @@ impl<A: Algorithm> Raf<A> {
         Ok(None)
     }
 
+    /// Writes the file's Merkle commitment into `out`.
+    ///
+    /// The commitment is a single hash that fixes the entire file contents; it
+    /// can be stored elsewhere and later compared to detect tampering. `out`
+    /// must be at least the hasher's output length. Requires a Merkle hasher;
+    /// otherwise returns [`Error::MerkleNotEnabled`].
     pub fn merkle_commitment(&self, out: &mut [u8]) -> Result<(), Error> {
         let ret =
             unsafe { A::ffi_merkle_commitment(self.ctx_ptr_const(), out.as_mut_ptr(), out.len()) };
@@ -134,6 +172,11 @@ impl<A: Algorithm> Drop for Raf<A> {
     }
 }
 
+/// Builder for configuring and opening a [`Raf`].
+///
+/// Lets you choose the chunk size, supply a custom [`RafRng`], enable a Merkle
+/// tree, and decide whether to truncate on creation, before calling
+/// [`create`](RafBuilder::create) or [`open`](RafBuilder::open).
 pub struct RafBuilder<A: Algorithm> {
     chunk_size: u32,
     flags: u8,
@@ -143,11 +186,16 @@ pub struct RafBuilder<A: Algorithm> {
 }
 
 impl<A: Algorithm> RafBuilder<A> {
+    /// Creates a builder that uses the operating system RNG ([`OsRng`]).
     #[cfg(feature = "getrandom")]
     pub fn new() -> Self {
         Self::with_rng(OsRng)
     }
 
+    /// Creates a builder that draws randomness from the supplied [`RafRng`].
+    ///
+    /// Use this on platforms without OS randomness, where the `getrandom`
+    /// feature is unavailable.
     pub fn with_rng(rng: impl RafRng + 'static) -> Self {
         RafBuilder {
             chunk_size: 65536,
@@ -158,11 +206,16 @@ impl<A: Algorithm> RafBuilder<A> {
         }
     }
 
+    /// Sets the size in bytes of each independently encrypted chunk.
+    ///
+    /// Only applies when creating a file; when opening, the chunk size is taken
+    /// from the file header. Defaults to 65536 bytes.
     pub fn chunk_size(mut self, size: u32) -> Self {
         self.chunk_size = size;
         self
     }
 
+    /// Controls whether an existing file is truncated when [`create`](RafBuilder::create) is called.
     pub fn truncate(mut self, yes: bool) -> Self {
         if yes {
             self.flags |= AEGIS_RAF_TRUNCATE;
@@ -172,16 +225,25 @@ impl<A: Algorithm> RafBuilder<A> {
         self
     }
 
+    /// Replaces the random number generator used by this builder.
     pub fn rng(mut self, rng: impl RafRng + 'static) -> Self {
         self.rng = Box::new(rng);
         self
     }
 
+    /// Enables a Merkle tree over the file using `hasher`, sized for up to `max_chunks` chunks.
+    ///
+    /// With a Merkle tree, whole-file integrity can be checked via
+    /// [`Raf::merkle_verify`] and [`Raf::merkle_commitment`].
     pub fn merkle(mut self, hasher: impl MerkleHasher + 'static, max_chunks: u64) -> Self {
         self.merkle = Some((Box::new(hasher), max_chunks));
         self
     }
 
+    /// Creates a new encrypted file on `io` with the given `key` and returns an open [`Raf`].
+    ///
+    /// The header records the algorithm and chunk size. If [`truncate`](RafBuilder::truncate)
+    /// was not set, creation fails with [`Error::AlreadyExists`] when the backing store is non-empty.
     pub fn create(self, io: impl RafIo + 'static, key: &A::Key) -> Result<Raf<A>, Error> {
         ensure_init();
 
@@ -237,6 +299,10 @@ impl<A: Algorithm> RafBuilder<A> {
         })
     }
 
+    /// Opens an existing encrypted file on `io` with the given `key` and returns an open [`Raf`].
+    ///
+    /// The algorithm `A` must match the one stored in the header, otherwise an
+    /// [`Error::InvalidArgument`] is returned. The chunk size is read from the header.
     pub fn open(self, io: impl RafIo + 'static, key: &A::Key) -> Result<Raf<A>, Error> {
         ensure_init();
 

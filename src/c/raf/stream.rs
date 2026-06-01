@@ -3,12 +3,17 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 use super::algorithm::Algorithm;
 use super::context::Raf;
 
+/// A seekable cursor over a [`Raf`] that implements [`std::io::Read`], [`std::io::Write`], and [`std::io::Seek`].
+///
+/// The cursor tracks a byte position and lets a RAF file be used with the
+/// standard `std::io` traits. Create one with [`Raf::cursor`].
 pub struct RafCursor<'a, A: Algorithm> {
     raf: &'a mut Raf<A>,
     pos: u64,
 }
 
 impl<A: Algorithm> Raf<A> {
+    /// Returns a [`RafCursor`] positioned at the start of the file.
     pub fn cursor(&mut self) -> RafCursor<'_, A> {
         RafCursor { raf: self, pos: 0 }
     }
