@@ -59,7 +59,7 @@ macro_rules! impl_algorithm {
             const ALG_ID: u8 = $alg_id;
 
             unsafe fn ffi_scratch_size(chunk_size: u32) -> usize {
-                paste::paste! { ffi::[<$prefix _raf_scratch_size>](chunk_size) }
+                pastey::paste! { ffi::[<$prefix _raf_scratch_size>](chunk_size) }
             }
 
             unsafe fn ffi_create(
@@ -69,7 +69,7 @@ macro_rules! impl_algorithm {
                 cfg: *const ffi::aegis_raf_config,
                 key: *const u8,
             ) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_create>](ctx as *mut ffi::$ctx, io, rng, cfg, key) }
+                pastey::paste! { ffi::[<$prefix _raf_create>](ctx as *mut ffi::$ctx, io, rng, cfg, key) }
             }
 
             unsafe fn ffi_open(
@@ -79,7 +79,7 @@ macro_rules! impl_algorithm {
                 cfg: *const ffi::aegis_raf_config,
                 key: *const u8,
             ) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_open>](ctx as *mut ffi::$ctx, io, rng, cfg, key) }
+                pastey::paste! { ffi::[<$prefix _raf_open>](ctx as *mut ffi::$ctx, io, rng, cfg, key) }
             }
 
             unsafe fn ffi_read(
@@ -89,7 +89,7 @@ macro_rules! impl_algorithm {
                 len: usize,
                 offset: u64,
             ) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_read>](ctx as *mut ffi::$ctx, out, bytes_read, len, offset) }
+                pastey::paste! { ffi::[<$prefix _raf_read>](ctx as *mut ffi::$ctx, out, bytes_read, len, offset) }
             }
 
             unsafe fn ffi_write(
@@ -99,35 +99,35 @@ macro_rules! impl_algorithm {
                 len: usize,
                 offset: u64,
             ) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_write>](ctx as *mut ffi::$ctx, bytes_written, data, len, offset) }
+                pastey::paste! { ffi::[<$prefix _raf_write>](ctx as *mut ffi::$ctx, bytes_written, data, len, offset) }
             }
 
             unsafe fn ffi_truncate(ctx: *mut u8, size: u64) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_truncate>](ctx as *mut ffi::$ctx, size) }
+                pastey::paste! { ffi::[<$prefix _raf_truncate>](ctx as *mut ffi::$ctx, size) }
             }
 
             unsafe fn ffi_get_size(ctx: *const u8, size: *mut u64) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_get_size>](ctx as *const ffi::$ctx, size) }
+                pastey::paste! { ffi::[<$prefix _raf_get_size>](ctx as *const ffi::$ctx, size) }
             }
 
             unsafe fn ffi_sync(ctx: *mut u8) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_sync>](ctx as *mut ffi::$ctx) }
+                pastey::paste! { ffi::[<$prefix _raf_sync>](ctx as *mut ffi::$ctx) }
             }
 
             unsafe fn ffi_close(ctx: *mut u8) {
-                paste::paste! { ffi::[<$prefix _raf_close>](ctx as *mut ffi::$ctx) }
+                pastey::paste! { ffi::[<$prefix _raf_close>](ctx as *mut ffi::$ctx) }
             }
 
             unsafe fn ffi_merkle_rebuild(ctx: *mut u8) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_merkle_rebuild>](ctx as *mut ffi::$ctx) }
+                pastey::paste! { ffi::[<$prefix _raf_merkle_rebuild>](ctx as *mut ffi::$ctx) }
             }
 
             unsafe fn ffi_merkle_verify(ctx: *mut u8, corrupted: *mut u64) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_merkle_verify>](ctx as *mut ffi::$ctx, corrupted) }
+                pastey::paste! { ffi::[<$prefix _raf_merkle_verify>](ctx as *mut ffi::$ctx, corrupted) }
             }
 
             unsafe fn ffi_merkle_commitment(ctx: *const u8, out: *mut u8, len: usize) -> c_int {
-                paste::paste! { ffi::[<$prefix _raf_merkle_commitment>](ctx as *const ffi::$ctx, out, len) }
+                pastey::paste! { ffi::[<$prefix _raf_merkle_commitment>](ctx as *const ffi::$ctx, out, len) }
             }
         }
     };

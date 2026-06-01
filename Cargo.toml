@@ -40,7 +40,7 @@ serde_json = "1.0"
 [dependencies]
 aead = { optional = true, version = "0.6.0-rc.10", features = ["rand_core"] }
 getrandom = { version = "0.4", optional = true }
-paste = { version = "1", optional = true }
+pastey = { version = "0.2", optional = true }
 softaes = { version = "0.1", optional = true }
 
 [target."cfg(not(any(target_arch = \"wasm32\", target_arch = \"wasm64\")))".dependencies.boring]
@@ -58,7 +58,7 @@ pure-rust = ["softaes"]
 rustcrypto-traits-06 = ["aead"]
 std = []
 raf = ["raf-core", "getrandom"]
-raf-core = ["std", "paste"]
+raf-core = ["std", "pastey"]
 js = ["getrandom", "getrandom/wasm_js"]
 
 [profile.release]

@@ -89,7 +89,7 @@ extern "C" {
 
 macro_rules! declare_raf_ffi {
     ($prefix:ident, $ctx:ident) => {
-        paste::paste! {
+        pastey::paste! {
             extern "C" {
                 pub fn [<$prefix _raf_scratch_size>](chunk_size: u32) -> usize;
 
