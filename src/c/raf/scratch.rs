@@ -11,6 +11,7 @@ pub(crate) struct ScratchBuf {
 
 impl ScratchBuf {
     pub fn new(size: usize) -> Self {
+        assert!(size != 0, "scratch buffer size must be non-zero");
         let layout = Layout::from_size_align(size, SCRATCH_ALIGN).unwrap();
         let ptr = unsafe { std::alloc::alloc_zeroed(layout) };
         assert!(!ptr.is_null(), "scratch buffer allocation failed");
