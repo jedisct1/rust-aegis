@@ -28,6 +28,8 @@ pub enum Error {
     /// The authentication tag did not match: the ciphertext or associated data
     /// has been altered, or the wrong key or nonce was used.
     InvalidTag,
+    /// An output buffer was too short to hold the result.
+    InvalidLength,
 }
 
 #[cfg(feature = "std")]
@@ -35,6 +37,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::InvalidTag => write!(f, "Invalid tag"),
+            Error::InvalidLength => write!(f, "Invalid length"),
         }
     }
 }

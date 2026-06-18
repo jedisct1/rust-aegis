@@ -440,6 +440,420 @@ mod test_vectors {
 
     #[test]
     #[cfg(feature = "std")]
+    fn test_aegis128l_state_vectors() {
+        use crate::aegis128l::Aegis128LState;
+
+        let data = fs::read_to_string("src/test-vectors/aegis-128l-test-vectors.json")
+            .expect("Unable to read test vectors");
+        let vectors: Vec<Value> =
+            serde_json::from_str(&data).expect("Unable to parse test vectors");
+
+        for vector in vectors.iter() {
+            if vector.get("key").is_none()
+                || vector.get("ct").is_none()
+                || vector.get("msg").is_none()
+                || vector.get("ad").is_none()
+                || vector.get("tag128").is_none()
+            {
+                continue;
+            }
+
+            let name = vector["name"].as_str().unwrap();
+            let key_vec = Hex::decode_to_vec(vector["key"].as_str().unwrap(), None).unwrap();
+            let nonce_vec = Hex::decode_to_vec(vector["nonce"].as_str().unwrap(), None).unwrap();
+            let key: [u8; 16] = key_vec.try_into().expect("Invalid key length");
+            let nonce: [u8; 16] = nonce_vec.try_into().expect("Invalid nonce length");
+            let ad = Hex::decode_to_vec(vector["ad"].as_str().unwrap(), None).unwrap();
+            let msg = Hex::decode_to_vec(vector["msg"].as_str().unwrap(), None).unwrap();
+            let expected_ct = Hex::decode_to_vec(vector["ct"].as_str().unwrap(), None).unwrap();
+            let expected_tag128 =
+                Hex::decode_to_vec(vector["tag128"].as_str().unwrap(), None).unwrap();
+            let expected_tag256 =
+                Hex::decode_to_vec(vector["tag256"].as_str().unwrap(), None).unwrap();
+
+            // Test with 128-bit tag
+            {
+                let mut st = Aegis128LState::<16>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag128[..], "Test {} failed: tag128 mismatch", name);
+
+                let mut st = Aegis128LState::<16>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+
+            // Test with 256-bit tag
+            {
+                let mut st = Aegis128LState::<32>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag256[..], "Test {} failed: tag256 mismatch", name);
+
+                let mut st = Aegis128LState::<32>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_aegis128x2_state_vectors() {
+        use crate::aegis128x2::Aegis128X2State;
+
+        let data = fs::read_to_string("src/test-vectors/aegis-128x2-test-vectors.json")
+            .expect("Unable to read test vectors");
+        let vectors: Vec<Value> =
+            serde_json::from_str(&data).expect("Unable to parse test vectors");
+
+        for vector in vectors.iter() {
+            if vector.get("key").is_none()
+                || vector.get("ct").is_none()
+                || vector.get("msg").is_none()
+                || vector.get("ad").is_none()
+                || vector.get("tag128").is_none()
+            {
+                continue;
+            }
+
+            let name = vector["name"].as_str().unwrap();
+            let key_vec = Hex::decode_to_vec(vector["key"].as_str().unwrap(), None).unwrap();
+            let nonce_vec = Hex::decode_to_vec(vector["nonce"].as_str().unwrap(), None).unwrap();
+            let key: [u8; 16] = key_vec.try_into().expect("Invalid key length");
+            let nonce: [u8; 16] = nonce_vec.try_into().expect("Invalid nonce length");
+            let ad = Hex::decode_to_vec(vector["ad"].as_str().unwrap(), None).unwrap();
+            let msg = Hex::decode_to_vec(vector["msg"].as_str().unwrap(), None).unwrap();
+            let expected_ct = Hex::decode_to_vec(vector["ct"].as_str().unwrap(), None).unwrap();
+            let expected_tag128 =
+                Hex::decode_to_vec(vector["tag128"].as_str().unwrap(), None).unwrap();
+            let expected_tag256 =
+                Hex::decode_to_vec(vector["tag256"].as_str().unwrap(), None).unwrap();
+
+            // Test with 128-bit tag
+            {
+                let mut st = Aegis128X2State::<16>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag128[..], "Test {} failed: tag128 mismatch", name);
+
+                let mut st = Aegis128X2State::<16>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+
+            // Test with 256-bit tag
+            {
+                let mut st = Aegis128X2State::<32>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag256[..], "Test {} failed: tag256 mismatch", name);
+
+                let mut st = Aegis128X2State::<32>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_aegis128x4_state_vectors() {
+        use crate::aegis128x4::Aegis128X4State;
+
+        let data = fs::read_to_string("src/test-vectors/aegis-128x4-test-vectors.json")
+            .expect("Unable to read test vectors");
+        let vectors: Vec<Value> =
+            serde_json::from_str(&data).expect("Unable to parse test vectors");
+
+        for vector in vectors.iter() {
+            if vector.get("key").is_none()
+                || vector.get("ct").is_none()
+                || vector.get("msg").is_none()
+                || vector.get("ad").is_none()
+                || vector.get("tag128").is_none()
+            {
+                continue;
+            }
+
+            let name = vector["name"].as_str().unwrap();
+            let key_vec = Hex::decode_to_vec(vector["key"].as_str().unwrap(), None).unwrap();
+            let nonce_vec = Hex::decode_to_vec(vector["nonce"].as_str().unwrap(), None).unwrap();
+            let key: [u8; 16] = key_vec.try_into().expect("Invalid key length");
+            let nonce: [u8; 16] = nonce_vec.try_into().expect("Invalid nonce length");
+            let ad = Hex::decode_to_vec(vector["ad"].as_str().unwrap(), None).unwrap();
+            let msg = Hex::decode_to_vec(vector["msg"].as_str().unwrap(), None).unwrap();
+            let expected_ct = Hex::decode_to_vec(vector["ct"].as_str().unwrap(), None).unwrap();
+            let expected_tag128 =
+                Hex::decode_to_vec(vector["tag128"].as_str().unwrap(), None).unwrap();
+            let expected_tag256 =
+                Hex::decode_to_vec(vector["tag256"].as_str().unwrap(), None).unwrap();
+
+            // Test with 128-bit tag
+            {
+                let mut st = Aegis128X4State::<16>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag128[..], "Test {} failed: tag128 mismatch", name);
+
+                let mut st = Aegis128X4State::<16>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+
+            // Test with 256-bit tag
+            {
+                let mut st = Aegis128X4State::<32>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag256[..], "Test {} failed: tag256 mismatch", name);
+
+                let mut st = Aegis128X4State::<32>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_aegis256_state_vectors() {
+        use crate::aegis256::Aegis256State;
+
+        let data = fs::read_to_string("src/test-vectors/aegis-256-test-vectors.json")
+            .expect("Unable to read test vectors");
+        let vectors: Vec<Value> =
+            serde_json::from_str(&data).expect("Unable to parse test vectors");
+
+        for vector in vectors.iter() {
+            if vector.get("key").is_none()
+                || vector.get("ct").is_none()
+                || vector.get("msg").is_none()
+                || vector.get("ad").is_none()
+                || vector.get("tag128").is_none()
+            {
+                continue;
+            }
+
+            let name = vector["name"].as_str().unwrap();
+            let key_vec = Hex::decode_to_vec(vector["key"].as_str().unwrap(), None).unwrap();
+            let nonce_vec = Hex::decode_to_vec(vector["nonce"].as_str().unwrap(), None).unwrap();
+            let key: [u8; 32] = key_vec.try_into().expect("Invalid key length");
+            let nonce: [u8; 32] = nonce_vec.try_into().expect("Invalid nonce length");
+            let ad = Hex::decode_to_vec(vector["ad"].as_str().unwrap(), None).unwrap();
+            let msg = Hex::decode_to_vec(vector["msg"].as_str().unwrap(), None).unwrap();
+            let expected_ct = Hex::decode_to_vec(vector["ct"].as_str().unwrap(), None).unwrap();
+            let expected_tag128 =
+                Hex::decode_to_vec(vector["tag128"].as_str().unwrap(), None).unwrap();
+            let expected_tag256 =
+                Hex::decode_to_vec(vector["tag256"].as_str().unwrap(), None).unwrap();
+
+            // Test with 128-bit tag
+            {
+                let mut st = Aegis256State::<16>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag128[..], "Test {} failed: tag128 mismatch", name);
+
+                let mut st = Aegis256State::<16>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+
+            // Test with 256-bit tag
+            {
+                let mut st = Aegis256State::<32>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag256[..], "Test {} failed: tag256 mismatch", name);
+
+                let mut st = Aegis256State::<32>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_aegis256x2_state_vectors() {
+        use crate::aegis256x2::Aegis256X2State;
+
+        let data = fs::read_to_string("src/test-vectors/aegis-256x2-test-vectors.json")
+            .expect("Unable to read test vectors");
+        let vectors: Vec<Value> =
+            serde_json::from_str(&data).expect("Unable to parse test vectors");
+
+        for vector in vectors.iter() {
+            if vector.get("key").is_none()
+                || vector.get("ct").is_none()
+                || vector.get("msg").is_none()
+                || vector.get("ad").is_none()
+                || vector.get("tag128").is_none()
+            {
+                continue;
+            }
+
+            let name = vector["name"].as_str().unwrap();
+            let key_vec = Hex::decode_to_vec(vector["key"].as_str().unwrap(), None).unwrap();
+            let nonce_vec = Hex::decode_to_vec(vector["nonce"].as_str().unwrap(), None).unwrap();
+            let key: [u8; 32] = key_vec.try_into().expect("Invalid key length");
+            let nonce: [u8; 32] = nonce_vec.try_into().expect("Invalid nonce length");
+            let ad = Hex::decode_to_vec(vector["ad"].as_str().unwrap(), None).unwrap();
+            let msg = Hex::decode_to_vec(vector["msg"].as_str().unwrap(), None).unwrap();
+            let expected_ct = Hex::decode_to_vec(vector["ct"].as_str().unwrap(), None).unwrap();
+            let expected_tag128 =
+                Hex::decode_to_vec(vector["tag128"].as_str().unwrap(), None).unwrap();
+            let expected_tag256 =
+                Hex::decode_to_vec(vector["tag256"].as_str().unwrap(), None).unwrap();
+
+            // Test with 128-bit tag
+            {
+                let mut st = Aegis256X2State::<16>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag128[..], "Test {} failed: tag128 mismatch", name);
+
+                let mut st = Aegis256X2State::<16>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+
+            // Test with 256-bit tag
+            {
+                let mut st = Aegis256X2State::<32>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag256[..], "Test {} failed: tag256 mismatch", name);
+
+                let mut st = Aegis256X2State::<32>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_aegis256x4_state_vectors() {
+        use crate::aegis256x4::Aegis256X4State;
+
+        let data = fs::read_to_string("src/test-vectors/aegis-256x4-test-vectors.json")
+            .expect("Unable to read test vectors");
+        let vectors: Vec<Value> =
+            serde_json::from_str(&data).expect("Unable to parse test vectors");
+
+        for vector in vectors.iter() {
+            if vector.get("key").is_none()
+                || vector.get("ct").is_none()
+                || vector.get("msg").is_none()
+                || vector.get("ad").is_none()
+                || vector.get("tag128").is_none()
+            {
+                continue;
+            }
+
+            let name = vector["name"].as_str().unwrap();
+            let key_vec = Hex::decode_to_vec(vector["key"].as_str().unwrap(), None).unwrap();
+            let nonce_vec = Hex::decode_to_vec(vector["nonce"].as_str().unwrap(), None).unwrap();
+            let key: [u8; 32] = key_vec.try_into().expect("Invalid key length");
+            let nonce: [u8; 32] = nonce_vec.try_into().expect("Invalid nonce length");
+            let ad = Hex::decode_to_vec(vector["ad"].as_str().unwrap(), None).unwrap();
+            let msg = Hex::decode_to_vec(vector["msg"].as_str().unwrap(), None).unwrap();
+            let expected_ct = Hex::decode_to_vec(vector["ct"].as_str().unwrap(), None).unwrap();
+            let expected_tag128 =
+                Hex::decode_to_vec(vector["tag128"].as_str().unwrap(), None).unwrap();
+            let expected_tag256 =
+                Hex::decode_to_vec(vector["tag256"].as_str().unwrap(), None).unwrap();
+
+            // Test with 128-bit tag
+            {
+                let mut st = Aegis256X4State::<16>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag128[..], "Test {} failed: tag128 mismatch", name);
+
+                let mut st = Aegis256X4State::<16>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+
+            // Test with 256-bit tag
+            {
+                let mut st = Aegis256X4State::<32>::new(&key, &nonce, &ad);
+                let mut ct = vec![0u8; msg.len()];
+                st.encrypt_update(&mut ct, &msg).unwrap();
+                let tag = st.encrypt_final();
+                assert_eq!(ct, expected_ct, "Test {} failed: ciphertext mismatch", name);
+                assert_eq!(&tag[..], &expected_tag256[..], "Test {} failed: tag256 mismatch", name);
+
+                let mut st = Aegis256X4State::<32>::new(&key, &nonce, &ad);
+                let mut decrypted = vec![0u8; ct.len()];
+                st.decrypt_update(&mut decrypted, &ct).unwrap();
+                st.decrypt_final(&tag)
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
+                assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
     fn test_aegismac_vectors() {
         use crate::aegis128l::Aegis128LMac;
         use crate::aegis128x2::Aegis128X2Mac;
