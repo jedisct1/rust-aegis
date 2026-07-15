@@ -20,6 +20,70 @@ AEGIS is a new family of authenticated encryption algorithms, offering high secu
 
 - `js`: enables `getrandom` with the `wasm_js` backend for use in `wasm32-unknown-unknown` environments with JavaScript.
 
+# Usage
+
+Each variant lives in its own module and is parameterized by the tag length in bytes (16 or 32).
+One-shot encryption produces the ciphertext along with a detached tag:
+
+```rust
+use aegis::aegis128l::Aegis128L;
+
+let key = [0u8; 16];
+let nonce = [0u8; 16]; // Never reuse a nonce with the same key!
+let ad = b"additional data";
+
+let mut buf = *b"AEGIS is fast";
+let tag = Aegis128L::<16>::new(&key, &nonce).encrypt_in_place(&mut buf, ad);
+Aegis128L::<16>::new(&key, &nonce)
+    .decrypt_in_place(&mut buf, &tag, ad)
+    .unwrap();
+assert_eq!(&buf, b"AEGIS is fast");
+```
+
+The in-place functions work without allocations and without `std`.
+With the default `std` feature, `encrypt` and `decrypt` do the same into freshly allocated buffers.
+
+# Incremental encryption and decryption
+
+Every variant exposes an `Encryptor` and a `Decryptor` for processing a single message in chunks of arbitrary sizes, without allocations and without `std`.
+
+The associated data must be known up front; the message itself can arrive piece by piece.
+Encryption emits exactly one ciphertext byte per plaintext byte, and finalization returns the detached tag:
+
+```rust
+use aegis::aegis128l::Aegis128L;
+
+let key = [0u8; 16];
+let nonce = [0u8; 16]; // Never reuse a nonce with the same key!
+let msg = b"AEGIS is fast";
+let ad = b"additional data";
+
+let cipher = Aegis128L::<16>::new(&key, &nonce);
+let mut encryptor = cipher.encryptor(ad);
+let mut ct = [0u8; 13];
+encryptor.update(&msg[..5], &mut ct[..5]);
+encryptor.update(&msg[5..], &mut ct[5..]);
+let tag = encryptor.finalize();
+
+// Decryption borrows the destination buffer until the tag has been verified.
+let mut pt = [0u8; 13];
+let mut decryptor = cipher.decryptor(ad, &mut pt);
+decryptor.update(&ct[..7]).unwrap();
+decryptor.update(&ct[7..]).unwrap();
+let msg2 = decryptor.finalize(&tag).unwrap();
+assert_eq!(msg2, &msg[..]);
+```
+
+Incremental decryption necessarily produces plaintext before the tag can be checked, and acting on unauthenticated plaintext is a classic protocol break.
+
+The API prevents it structurally: the `Decryptor` exclusively borrows the whole destination buffer, so the decrypted bytes only become reachable through the slice returned by a successful `finalize`.
+
+If the tag turns out to be invalid, or if the decryptor is dropped before finalization, whatever was provisionally written is erased.
+
+This means the destination must be sized for the complete message up front.
+
+The design is meant for messages that arrive in chunks, not for messages too large to hold in memory; the latter needs a record protocol that splits the stream into independently authenticated messages.
+
 # Random Access Files (RAF)
 
 The `raf` feature exposes an encrypted random-access file API built on top of libaegis. Files are split into independently encrypted chunks, each authenticated with AEAD. Reads and writes at arbitrary byte offsets are supported without decrypting the entire file. An optional Merkle tree provides whole-file integrity verification.

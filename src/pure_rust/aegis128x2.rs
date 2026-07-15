@@ -1,4 +1,8 @@
+use core::fmt;
+
 use super::{AesBlock, AesBlock2};
+use crate::incremental::{check_ad_length, tags_match, MessageLength, Quarantine};
+use crate::wipe::wipe_value;
 pub use crate::Error;
 
 /// AEGIS-128X2 key
@@ -100,10 +104,32 @@ impl State {
         self.update(m0, m1);
     }
 
+    fn absorb_ad(&mut self, ad: &[u8]) {
+        let mut src = [0u8; 64];
+        let mut i = 0;
+        while i + 64 <= ad.len() {
+            src.copy_from_slice(&ad[i..][..64]);
+            self.absorb(&src);
+            i += 64;
+        }
+        if ad.len() % 64 != 0 {
+            src.fill(0);
+            src[..ad.len() % 64].copy_from_slice(&ad[i..]);
+            self.absorb(&src);
+        }
+    }
+
+    #[inline(always)]
+    fn keystream(&self) -> (AesBlock2, AesBlock2) {
+        (
+            self.s6.xor(self.s1).xor(self.s2.and(self.s3)),
+            self.s2.xor(self.s5).xor(self.s6.and(self.s7)),
+        )
+    }
+
     #[inline(always)]
     fn enc(&mut self, dst: &mut [u8; 64], src: &[u8; 64]) {
-        let z0 = self.s6.xor(self.s1).xor(self.s2.and(self.s3));
-        let z1 = self.s2.xor(self.s5).xor(self.s6.and(self.s7));
+        let (z0, z1) = self.keystream();
 
         let m0 = AesBlock2::from_blocks(
             AesBlock::from_bytes(&src[0..16]),
@@ -129,8 +155,7 @@ impl State {
 
     #[inline(always)]
     fn dec(&mut self, dst: &mut [u8; 64], src: &[u8; 64]) {
-        let z0 = self.s6.xor(self.s1).xor(self.s2.and(self.s3));
-        let z1 = self.s2.xor(self.s5).xor(self.s6.and(self.s7));
+        let (z0, z1) = self.keystream();
 
         let c0 = AesBlock2::from_blocks(
             AesBlock::from_bytes(&src[0..16]),
@@ -155,12 +180,23 @@ impl State {
     }
 
     #[inline(always)]
+    fn squeeze_keystream(&self, dst: &mut [u8; 64]) {
+        let (z0, z1) = self.keystream();
+
+        let (z00, z01) = z0.as_blocks();
+        let (z10, z11) = z1.as_blocks();
+        dst[0..16].copy_from_slice(&z00.to_bytes());
+        dst[16..32].copy_from_slice(&z01.to_bytes());
+        dst[32..48].copy_from_slice(&z10.to_bytes());
+        dst[48..64].copy_from_slice(&z11.to_bytes());
+    }
+
+    #[inline(always)]
     fn dec_partial(&mut self, dst: &mut [u8], src: &[u8]) {
         let len = src.len();
         debug_assert!(len < 64);
 
-        let z0 = self.s6.xor(self.s1).xor(self.s2.and(self.s3));
-        let z1 = self.s2.xor(self.s5).xor(self.s6.and(self.s7));
+        let (z0, z1) = self.keystream();
 
         let (z00, z01) = z0.as_blocks();
         let (z10, z11) = z1.as_blocks();
@@ -196,10 +232,10 @@ impl State {
     }
 
     #[inline(always)]
-    fn mac<const TAG_BYTES: usize>(&mut self, adlen: usize, mlen: usize) -> Tag<TAG_BYTES> {
+    fn mac<const TAG_BYTES: usize>(&mut self, adlen: u64, mlen: u64) -> Tag<TAG_BYTES> {
         let mut sizes = [0u8; 16];
-        sizes[..8].copy_from_slice(&(adlen as u64 * 8).to_le_bytes());
-        sizes[8..16].copy_from_slice(&(mlen as u64 * 8).to_le_bytes());
+        sizes[..8].copy_from_slice(&(adlen * 8).to_le_bytes());
+        sizes[8..16].copy_from_slice(&(mlen * 8).to_le_bytes());
         let u = AesBlock::from_bytes(&sizes);
 
         let (s20, s21) = self.s2.as_blocks();
@@ -333,22 +369,8 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         let adlen = ad.len();
         let mut c = vec![0u8; mlen];
 
-        // Process AD
+        state.absorb_ad(ad);
         let mut i = 0;
-        while i + 64 <= adlen {
-            let mut block = [0u8; 64];
-            block.copy_from_slice(&ad[i..i + 64]);
-            state.absorb(&block);
-            i += 64;
-        }
-        if adlen % 64 != 0 {
-            let mut block = [0u8; 64];
-            block[..adlen - i].copy_from_slice(&ad[i..]);
-            state.absorb(&block);
-        }
-
-        // Process message
-        i = 0;
         while i + 64 <= mlen {
             let mut src = [0u8; 64];
             let mut dst = [0u8; 64];
@@ -365,7 +387,7 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
             c[i..].copy_from_slice(&dst[..mlen - i]);
         }
 
-        let tag = state.mac::<TAG_BYTES>(adlen, mlen);
+        let tag = state.mac::<TAG_BYTES>(adlen as u64, mlen as u64);
         (c, tag)
     }
 
@@ -375,22 +397,8 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         let mclen = mc.len();
         let adlen = ad.len();
 
-        // Process AD
+        state.absorb_ad(ad);
         let mut i = 0;
-        while i + 64 <= adlen {
-            let mut block = [0u8; 64];
-            block.copy_from_slice(&ad[i..i + 64]);
-            state.absorb(&block);
-            i += 64;
-        }
-        if adlen % 64 != 0 {
-            let mut block = [0u8; 64];
-            block[..adlen - i].copy_from_slice(&ad[i..]);
-            state.absorb(&block);
-        }
-
-        // Process message
-        i = 0;
         while i + 64 <= mclen {
             let mut src = [0u8; 64];
             let mut dst = [0u8; 64];
@@ -407,7 +415,7 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
             mc[i..].copy_from_slice(&dst[..mclen - i]);
         }
 
-        state.mac::<TAG_BYTES>(adlen, mclen)
+        state.mac::<TAG_BYTES>(adlen as u64, mclen as u64)
     }
 
     /// Decrypt a message
@@ -418,22 +426,8 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         let adlen = ad.len();
         let mut m = vec![0u8; clen];
 
-        // Process AD
+        state.absorb_ad(ad);
         let mut i = 0;
-        while i + 64 <= adlen {
-            let mut block = [0u8; 64];
-            block.copy_from_slice(&ad[i..i + 64]);
-            state.absorb(&block);
-            i += 64;
-        }
-        if adlen % 64 != 0 {
-            let mut block = [0u8; 64];
-            block[..adlen - i].copy_from_slice(&ad[i..]);
-            state.absorb(&block);
-        }
-
-        // Process ciphertext
-        i = 0;
         while i + 64 <= clen {
             let mut src = [0u8; 64];
             let mut dst = [0u8; 64];
@@ -446,7 +440,7 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
             state.dec_partial(&mut m[i..], &c[i..]);
         }
 
-        let tag2 = state.mac::<TAG_BYTES>(adlen, clen);
+        let tag2 = state.mac::<TAG_BYTES>(adlen as u64, clen as u64);
         let mut acc = 0u8;
         for (a, b) in tag.iter().zip(tag2.iter()) {
             acc |= a ^ b;
@@ -469,22 +463,8 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         let mclen = mc.len();
         let adlen = ad.len();
 
-        // Process AD
+        state.absorb_ad(ad);
         let mut i = 0;
-        while i + 64 <= adlen {
-            let mut block = [0u8; 64];
-            block.copy_from_slice(&ad[i..i + 64]);
-            state.absorb(&block);
-            i += 64;
-        }
-        if adlen % 64 != 0 {
-            let mut block = [0u8; 64];
-            block[..adlen - i].copy_from_slice(&ad[i..]);
-            state.absorb(&block);
-        }
-
-        // Process ciphertext
-        i = 0;
         while i + 64 <= mclen {
             let mut src = [0u8; 64];
             let mut dst = [0u8; 64];
@@ -500,7 +480,7 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
             mc[i..].copy_from_slice(&tmp[..remaining]);
         }
 
-        let tag2 = state.mac::<TAG_BYTES>(adlen, mclen);
+        let tag2 = state.mac::<TAG_BYTES>(adlen as u64, mclen as u64);
         let mut acc = 0u8;
         for (a, b) in tag.iter().zip(tag2.iter()) {
             acc |= a ^ b;
@@ -511,6 +491,241 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         }
         Ok(())
     }
+
+    /// Starts an incremental encryption of a single message.
+    ///
+    /// The associated data must be complete up front.
+    /// The message itself can then be fed to the returned [`Encryptor`] in chunks of any size.
+    ///
+    /// As with the one-shot functions, a key and nonce pair must never be reused.
+    ///
+    /// # Panics
+    /// Panics if `associated_data` is longer than `2^61 - 1` bytes.
+    pub fn encryptor(&self, associated_data: &[u8]) -> Encryptor<TAG_BYTES> {
+        Encryptor {
+            inner: IncrementalState::new(&self.state, associated_data),
+        }
+    }
+
+    /// Starts an incremental decryption of a single message.
+    ///
+    /// `plaintext` must be large enough to receive the whole decrypted message.
+    /// It stays exclusively borrowed by the returned [`Decryptor`],
+    /// so the decrypted bytes stay out of reach until [`Decryptor::finalize`] verifies the tag.
+    ///
+    /// # Panics
+    /// Panics if `associated_data` is longer than `2^61 - 1` bytes.
+    pub fn decryptor<'a>(
+        &self,
+        associated_data: &[u8],
+        plaintext: &'a mut [u8],
+    ) -> Decryptor<'a, TAG_BYTES> {
+        Decryptor {
+            inner: IncrementalState::new(&self.state, associated_data),
+            plaintext: Quarantine::new(plaintext),
+        }
+    }
+}
+
+impl<const TAG_BYTES: usize> fmt::Debug for Aegis128X2<TAG_BYTES> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Aegis128X2").finish_non_exhaustive()
+    }
+}
+
+struct IncrementalState {
+    state: State,
+    buf: [u8; 64],
+    pos: usize,
+    adlen: u64,
+    mlen: MessageLength,
+}
+
+impl IncrementalState {
+    fn new(cipher_state: &State, ad: &[u8]) -> Self {
+        check_ad_length(ad);
+        let mut state = *cipher_state;
+        state.absorb_ad(ad);
+        IncrementalState {
+            state,
+            buf: [0u8; 64],
+            pos: 0,
+            adlen: ad.len() as u64,
+            mlen: MessageLength::new(),
+        }
+    }
+
+    // Mirrors libaegis: a partial block consumes buffered keystream, and the
+    // plaintext takes its place so the whole block can be absorbed later.
+    fn transform<const DECRYPT: bool>(&mut self, mc: &mut [u8]) {
+        let mut offset = 0;
+        if self.pos != 0 {
+            let n = mc.len().min(64 - self.pos);
+            for j in 0..n {
+                let input = mc[j];
+                let output = input ^ self.buf[self.pos + j];
+                self.buf[self.pos + j] = if DECRYPT { output } else { input };
+                mc[j] = output;
+            }
+            self.pos += n;
+            offset = n;
+            if self.pos < 64 {
+                return;
+            }
+            let buf = self.buf;
+            self.state.absorb(&buf);
+            self.pos = 0;
+        }
+        let mut src = [0u8; 64];
+        let mut dst = [0u8; 64];
+        while offset + 64 <= mc.len() {
+            src.copy_from_slice(&mc[offset..][..64]);
+            if DECRYPT {
+                self.state.dec(&mut dst, &src);
+            } else {
+                self.state.enc(&mut dst, &src);
+            }
+            mc[offset..][..64].copy_from_slice(&dst);
+            offset += 64;
+        }
+        let left = mc.len() - offset;
+        if left != 0 {
+            self.state.squeeze_keystream(&mut self.buf);
+            for j in 0..left {
+                let input = mc[offset + j];
+                let output = input ^ self.buf[j];
+                self.buf[j] = if DECRYPT { output } else { input };
+                mc[offset + j] = output;
+            }
+            self.pos = left;
+        }
+    }
+
+    fn tag<const TAG_BYTES: usize>(&mut self) -> Tag<TAG_BYTES> {
+        if self.pos != 0 {
+            let mut tmp = [0u8; 64];
+            tmp[..self.pos].copy_from_slice(&self.buf[..self.pos]);
+            self.state.absorb(&tmp);
+        }
+        self.state.mac::<TAG_BYTES>(self.adlen, self.mlen.get())
+    }
+}
+
+/// Incremental AEGIS-128X2 encryption of a single message.
+///
+/// Created with [`Aegis128X2::encryptor`].
+/// Each update emits one ciphertext byte per plaintext byte, so chunks can have any size.
+/// [`Encryptor::finalize`] returns the detached authentication tag.
+///
+/// The internal state is erased on drop.
+pub struct Encryptor<const TAG_BYTES: usize> {
+    inner: IncrementalState,
+}
+
+impl<const TAG_BYTES: usize> Encryptor<TAG_BYTES> {
+    /// Encrypts the next plaintext chunk into `ciphertext`.
+    ///
+    /// # Panics
+    /// Panics if the two slices differ in length, or if the cumulative
+    /// message length exceeds `2^61 - 1` bytes.
+    pub fn update(&mut self, plaintext: &[u8], ciphertext: &mut [u8]) {
+        assert_eq!(
+            plaintext.len(),
+            ciphertext.len(),
+            "plaintext and ciphertext chunks must have the same length"
+        );
+        ciphertext.copy_from_slice(plaintext);
+        self.update_in_place(ciphertext);
+    }
+
+    /// Encrypts the next chunk in place.
+    ///
+    /// # Panics
+    /// Panics if the cumulative message length exceeds `2^61 - 1` bytes.
+    pub fn update_in_place(&mut self, buffer: &mut [u8]) {
+        self.inner.mlen.add(buffer.len());
+        self.inner.transform::<false>(buffer);
+    }
+
+    /// Completes the encryption and returns the detached authentication tag.
+    pub fn finalize(mut self) -> Tag<TAG_BYTES> {
+        self.inner.tag::<TAG_BYTES>()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_consumed_length_for_tests(&mut self, mlen: u64) {
+        self.inner.mlen.set_for_tests(mlen);
+    }
+}
+
+impl<const TAG_BYTES: usize> fmt::Debug for Encryptor<TAG_BYTES> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("aegis128x2::Encryptor")
+            .finish_non_exhaustive()
+    }
+}
+
+impl<const TAG_BYTES: usize> Drop for Encryptor<TAG_BYTES> {
+    fn drop(&mut self) {
+        wipe_value(&mut self.inner);
+    }
+}
+
+/// Incremental AEGIS-128X2 decryption of a single message.
+///
+/// Created with [`Aegis128X2::decryptor`].
+/// Ciphertext chunks are decrypted into the borrowed destination buffer,
+/// and the plaintext only becomes reachable once [`Decryptor::finalize`] has verified the tag.
+///
+/// If verification fails, or if the value is dropped before finalization,
+/// the decrypted bytes and the internal state are erased.
+pub struct Decryptor<'a, const TAG_BYTES: usize> {
+    inner: IncrementalState,
+    plaintext: Quarantine<'a>,
+}
+
+impl<'a, const TAG_BYTES: usize> Decryptor<'a, TAG_BYTES> {
+    /// Decrypts the next ciphertext chunk into the borrowed destination.
+    ///
+    /// On error, nothing is consumed and the decryptor remains usable.
+    pub fn update(&mut self, ciphertext: &[u8]) -> Result<(), Error> {
+        self.plaintext.fits(ciphertext.len())?;
+        self.inner.mlen.try_add(ciphertext.len())?;
+        let plaintext = self.plaintext.next_chunk(ciphertext.len());
+        plaintext.copy_from_slice(ciphertext);
+        self.inner.transform::<true>(plaintext);
+        Ok(())
+    }
+
+    /// Verifies the authentication tag and releases the decrypted message.
+    ///
+    /// On success, returns the written prefix of the destination buffer.
+    /// On failure, the decrypted bytes are erased and [`Error::InvalidTag`] is returned.
+    pub fn finalize(mut self, tag: &Tag<TAG_BYTES>) -> Result<&'a mut [u8], Error> {
+        let computed = self.inner.tag::<TAG_BYTES>();
+        if !tags_match(tag, &computed) {
+            return Err(Error::InvalidTag);
+        }
+        Ok(self.plaintext.release())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_consumed_length_for_tests(&mut self, mlen: u64) {
+        self.inner.mlen.set_for_tests(mlen);
+    }
+}
+
+impl<const TAG_BYTES: usize> fmt::Debug for Decryptor<'_, TAG_BYTES> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("aegis128x2::Decryptor")
+            .finish_non_exhaustive()
+    }
+}
+
+impl<const TAG_BYTES: usize> Drop for Decryptor<'_, TAG_BYTES> {
+    fn drop(&mut self) {
+        wipe_value(&mut self.inner);
+    }
 }
 
 /// AEGIS-128X2 MAC
@@ -520,6 +735,12 @@ pub struct Aegis128X2Mac<const TAG_BYTES: usize> {
     buf: [u8; 64],
     buf_len: usize,
     msg_len: usize,
+}
+
+impl<const TAG_BYTES: usize> fmt::Debug for Aegis128X2Mac<TAG_BYTES> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Aegis128X2Mac").finish_non_exhaustive()
+    }
 }
 
 impl<const TAG_BYTES: usize> Aegis128X2Mac<TAG_BYTES> {

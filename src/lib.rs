@@ -28,6 +28,11 @@ pub enum Error {
     /// The authentication tag did not match: the ciphertext or associated data
     /// has been altered, or the wrong key or nonce was used.
     InvalidTag,
+    /// The remaining space in the output buffer is smaller than the chunk
+    /// that was submitted.
+    OutputBufferTooSmall,
+    /// The cumulative input length exceeds the AEGIS limit of `2^61 - 1` bytes.
+    MessageTooLong,
 }
 
 #[cfg(feature = "std")]
@@ -35,9 +40,18 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::InvalidTag => write!(f, "Invalid tag"),
+            Error::OutputBufferTooSmall => write!(f, "Output buffer too small"),
+            Error::MessageTooLong => write!(f, "Message too long"),
         }
     }
 }
+
+/// AEGIS encodes lengths as 64-bit bit counts when computing the tag,
+/// so associated data and messages are each limited to `2^61 - 1` bytes.
+pub(crate) const MAX_AEAD_BYTES: u64 = (1 << 61) - 1;
+
+mod incremental;
+mod wipe;
 
 #[cfg(feature = "std")]
 impl std::error::Error for Error {}
@@ -45,6 +59,8 @@ impl std::error::Error for Error {}
 /// Implementations of third-party crate traits for the AEGIS ciphers.
 pub mod compat;
 
+#[cfg(test)]
+mod incremental_tests;
 #[cfg(test)]
 mod tests;
 
