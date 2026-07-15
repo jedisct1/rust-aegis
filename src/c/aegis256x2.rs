@@ -66,6 +66,40 @@ extern "C" {
     fn aegis256x2_mac_reset(st_: *mut aegis256x2_mac_state);
 
     fn aegis256x2_mac_state_clone(dst: *mut aegis256x2_mac_state, src: *const aegis256x2_mac_state);
+
+    fn aegis256x2_state_init(
+        st_: *mut aegis256x2_state,
+        ad: *const u8,
+        adlen: usize,
+        npub: *const u8,
+        k: *const u8,
+    );
+
+    fn aegis256x2_state_encrypt_update(
+        st_: *mut aegis256x2_state,
+        c: *mut u8,
+        m: *const u8,
+        mlen: usize,
+    ) -> c_int;
+
+    fn aegis256x2_state_encrypt_final(
+        st_: *mut aegis256x2_state,
+        mac: *mut u8,
+        maclen: usize,
+    ) -> c_int;
+
+    fn aegis256x2_state_decrypt_update(
+        st_: *mut aegis256x2_state,
+        m: *mut u8,
+        c: *const u8,
+        clen: usize,
+    ) -> c_int;
+
+    fn aegis256x2_state_decrypt_final(
+        st_: *mut aegis256x2_state,
+        mac: *const u8,
+        maclen: usize,
+    ) -> c_int;
 }
 
 #[cfg(feature = "std")]
@@ -368,5 +402,96 @@ impl<const TAG_BYTES: usize> Aegis256X2Mac<TAG_BYTES> {
         unsafe {
             aegis256x2_mac_reset(&mut self.st);
         }
+    }
+}
+
+/// AEGIS-256X2 state for incremental encryption or decryption.
+#[derive(Debug)]
+pub struct Aegis256X2State<const TAG_BYTES: usize> {
+    st: aegis256x2_state,
+}
+
+impl<const TAG_BYTES: usize> Aegis256X2State<TAG_BYTES> {
+    fn ensure_init() {
+        #[cfg(feature = "std")]
+        INIT.call_once(|| assert_eq!(unsafe { aegis_init() }, 0));
+
+        #[cfg(not(feature = "std"))]
+        {
+            use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
+
+            if INITIALIZED.load(Acquire) {
+                return;
+            }
+            let initializing = match INITIALIZING.compare_exchange(false, true, Acquire, Relaxed) {
+                Ok(initializing) => initializing,
+                Err(initializing) => initializing,
+            };
+            if initializing {
+                while !INITIALIZED.load(Acquire) {}
+            } else {
+                assert_eq!(unsafe { aegis_init() }, 0);
+                INITIALIZED.store(true, Release);
+                INITIALIZING.store(false, Release);
+            }
+        }
+    }
+
+    /// Initializes the state for incremental encryption or decryption.
+    ///
+    /// # Panics
+    /// Panics if `TAG_BYTES` is not 16 or 32.
+    pub fn new(key: &Key, nonce: &Nonce, ad: &[u8]) -> Self {
+        assert!(
+            TAG_BYTES == 16 || TAG_BYTES == 32,
+            "Invalid tag length, must be 16 or 32"
+        );
+        Self::ensure_init();
+        let mut st = aegis256x2_state { opaque: [0u8; 320] };
+        unsafe {
+            aegis256x2_state_init(&mut st, ad.as_ptr(), ad.len(), nonce.as_ptr(), key.as_ptr());
+        }
+        Aegis256X2State { st }
+    }
+
+    /// Encrypts a chunk. `c` must be at least `m.len()` bytes.
+    pub fn encrypt_update(&mut self, c: &mut [u8], m: &[u8]) -> Result<(), Error> {
+        if c.len() < m.len() {
+            return Err(Error::InvalidLength);
+        }
+        let ret = unsafe {
+            aegis256x2_state_encrypt_update(&mut self.st, c.as_mut_ptr(), m.as_ptr(), m.len())
+        };
+        if ret != 0 { Err(Error::InvalidTag) } else { Ok(()) }
+    }
+
+    /// Finalizes encryption and returns the authentication tag.
+    pub fn encrypt_final(mut self) -> Tag<TAG_BYTES> {
+        let mut tag = [0u8; TAG_BYTES];
+        unsafe {
+            aegis256x2_state_encrypt_final(&mut self.st, tag.as_mut_ptr(), TAG_BYTES);
+        }
+        tag
+    }
+
+    /// Decrypts a chunk. `m` must be at least `c.len()` bytes.
+    ///
+    /// The decrypted output must not be used until `decrypt_final` returns `Ok`.
+    pub fn decrypt_update(&mut self, m: &mut [u8], c: &[u8]) -> Result<(), Error> {
+        if m.len() < c.len() {
+            return Err(Error::InvalidLength);
+        }
+        let ret = unsafe {
+            aegis256x2_state_decrypt_update(&mut self.st, m.as_mut_ptr(), c.as_ptr(), c.len())
+        };
+        if ret != 0 { Err(Error::InvalidTag) } else { Ok(()) }
+    }
+
+    /// Verifies the authentication tag and finalizes decryption.
+    pub fn decrypt_final(mut self, mac: &Tag<TAG_BYTES>) -> Result<(), Error> {
+        let ret = unsafe {
+            aegis256x2_state_decrypt_final(&mut self.st, mac.as_ptr(), TAG_BYTES)
+        };
+        if ret != 0 { Err(Error::InvalidTag) } else { Ok(()) }
     }
 }
