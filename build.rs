@@ -18,6 +18,13 @@ fn is_cross_compiling() -> bool {
 }
 
 fn main() {
+    let force_relaxed_simd = env::var("CARGO_FEATURE_FORCE_WASM_RELAXED_SIMD").is_ok();
+    let force_strict_simd = env::var("CARGO_FEATURE_FORCE_WASM_STRICT_SIMD").is_ok();
+    if force_relaxed_simd && force_strict_simd {
+        panic!(
+            "The `force-wasm-relaxed-simd` and `force-wasm-strict-simd` features are mutually exclusive"
+        );
+    }
     let pure_rust = env::var("CARGO_FEATURE_PURE_RUST").is_ok();
     if pure_rust {
         return;
@@ -26,7 +33,11 @@ fn main() {
     if arch == "wasm32" {
         let src_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
         let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-        let library = if target_os == "wasi" {
+        let library = if force_relaxed_simd {
+            "aegis_relaxed_simd"
+        } else if force_strict_simd {
+            "aegis"
+        } else if target_os == "wasi" {
             "aegis_relaxed_simd"
         } else {
             "aegis"

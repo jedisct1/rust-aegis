@@ -22,10 +22,13 @@ AEGIS is a new family of authenticated encryption algorithms, offering high secu
 
 # WebAssembly
 
-The C backend includes separate WebAssembly libraries for browser and WASI
-targets.
-Cargo automatically links the portable SIMD build for non-WASI targets and
-the relaxed-SIMD build for WASI targets.
+The C backend includes separate WebAssembly libraries for browser and WASI targets.
+
+Cargo automatically links the portable SIMD build for non-WASI targets and the relaxed-SIMD build for WASI targets.
+
+The `force-wasm-strict-simd` and `force-wasm-relaxed-simd` Cargo features override that selection for runtimes with different capabilities.
+
+Forcing relaxed SIMD requires matching runtime support, and the two override features are mutually exclusive.
 
 # Usage
 
