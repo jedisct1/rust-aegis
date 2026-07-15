@@ -20,6 +20,13 @@ AEGIS is a new family of authenticated encryption algorithms, offering high secu
 
 - `js`: enables `getrandom` with the `wasm_js` backend for use in `wasm32-unknown-unknown` environments with JavaScript.
 
+# WebAssembly
+
+The C backend includes separate WebAssembly libraries for browser and WASI
+targets.
+Cargo automatically links the portable SIMD build for non-WASI targets and
+the relaxed-SIMD build for WASI targets.
+
 # Usage
 
 Each variant lives in its own module and is parameterized by the tag length in bytes (16 or 32).

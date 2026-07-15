@@ -25,7 +25,13 @@ fn main() {
     let arch = env::var("CARGO_CFG_TARGET_ARCH").expect("No target arch");
     if arch == "wasm32" {
         let src_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-        println!("cargo:rustc-link-lib=static=aegis");
+        let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+        let library = if target_os == "wasi" {
+            "aegis_relaxed_simd"
+        } else {
+            "aegis"
+        };
+        println!("cargo:rustc-link-lib=static={library}");
         println!("cargo:rustc-link-search=native={}/wasm-libs", src_dir);
         return;
     }
