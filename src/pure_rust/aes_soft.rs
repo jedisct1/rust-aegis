@@ -13,7 +13,7 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self) -> [u8; 16] {
+    pub fn to_bytes(self) -> [u8; 16] {
         self.0.to_bytes()
     }
 

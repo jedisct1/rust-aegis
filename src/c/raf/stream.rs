@@ -21,10 +21,7 @@ impl<A: Algorithm> Raf<A> {
 
 impl<A: Algorithm> Read for RafCursor<'_, A> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let n = self
-            .raf
-            .read(buf, self.pos)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let n = self.raf.read(buf, self.pos).map_err(io::Error::other)?;
         self.pos += n as u64;
         Ok(n)
     }
@@ -32,18 +29,13 @@ impl<A: Algorithm> Read for RafCursor<'_, A> {
 
 impl<A: Algorithm> Write for RafCursor<'_, A> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let n = self
-            .raf
-            .write(buf, self.pos)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let n = self.raf.write(buf, self.pos).map_err(io::Error::other)?;
         self.pos += n as u64;
         Ok(n)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.raf
-            .sync()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        self.raf.sync().map_err(io::Error::other)
     }
 }
 

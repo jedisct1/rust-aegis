@@ -54,7 +54,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis128L::<16>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
 
@@ -72,7 +72,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis128L::<32>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
         }
@@ -126,7 +126,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis128X2::<16>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
 
@@ -144,7 +144,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis128X2::<32>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
         }
@@ -198,7 +198,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis128X4::<16>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
 
@@ -216,7 +216,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis128X4::<32>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
         }
@@ -270,7 +270,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis256::<16>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
 
@@ -288,7 +288,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis256::<32>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
         }
@@ -342,7 +342,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis256X2::<16>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
 
@@ -360,7 +360,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis256X2::<32>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
         }
@@ -414,7 +414,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis256X4::<16>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
 
@@ -432,7 +432,7 @@ mod test_vectors {
                 // Test decryption
                 let decrypted = Aegis256X4::<32>::new(&key, &nonce)
                     .decrypt(&ct, &tag, &ad)
-                    .expect(&format!("Decryption failed for test {}", name));
+                    .unwrap_or_else(|_| panic!("Decryption failed for test {}", name));
                 assert_eq!(decrypted, msg, "Test {} failed: decryption mismatch", name);
             }
         }

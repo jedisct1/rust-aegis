@@ -11,7 +11,7 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self) -> [u8; 16] {
+    pub fn to_bytes(self) -> [u8; 16] {
         let mut bytes = [0u8; 16];
         unsafe { aarch64::vst1q_u8(bytes.as_mut_ptr() as *mut _, self.0) };
         bytes

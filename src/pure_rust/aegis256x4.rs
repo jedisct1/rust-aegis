@@ -1,4 +1,3 @@
-use core::convert::TryInto;
 use core::fmt;
 
 use super::{AesBlock, AesBlock4};
@@ -127,21 +126,20 @@ impl State {
     }
 
     fn stream(&mut self, out: &mut [u8]) {
-        let mut blocks = out.chunks_exact_mut(64);
-        for block in &mut blocks {
-            self.enc(block.try_into().unwrap(), &[0u8; 64]);
+        let (blocks, last) = out.as_chunks_mut::<64>();
+        for block in blocks {
+            self.enc(block, &[0u8; 64]);
         }
-        let last = blocks.into_remainder();
         last.fill(0);
         self.xor_keystream(last);
     }
 
     fn stream_xor(&mut self, mc: &mut [u8]) {
-        let mut blocks = mc.chunks_exact_mut(64);
-        for block in &mut blocks {
+        let (blocks, last) = mc.as_chunks_mut::<64>();
+        for block in blocks {
             self.xor_keystream(block);
         }
-        self.xor_keystream(blocks.into_remainder());
+        self.xor_keystream(last);
     }
 
     fn absorb_ad(&mut self, ad: &[u8]) {
@@ -152,7 +150,7 @@ impl State {
             self.absorb(&src);
             i += 64;
         }
-        if ad.len() % 64 != 0 {
+        if !ad.len().is_multiple_of(64) {
             src.fill(0);
             src[..ad.len() % 64].copy_from_slice(&ad[i..]);
             self.absorb(&src);
@@ -429,7 +427,7 @@ impl<const TAG_BYTES: usize> Aegis256X4<TAG_BYTES> {
             c[i..i + 64].copy_from_slice(&dst);
             i += 64;
         }
-        if mlen % 64 != 0 {
+        if !mlen.is_multiple_of(64) {
             let mut src = [0u8; 64];
             let mut dst = [0u8; 64];
             src[..mlen - i].copy_from_slice(&m[i..]);
@@ -462,7 +460,7 @@ impl<const TAG_BYTES: usize> Aegis256X4<TAG_BYTES> {
             mc[i..i + 64].copy_from_slice(&dst);
             i += 64;
         }
-        if mclen % 64 != 0 {
+        if !mclen.is_multiple_of(64) {
             let mut src = [0u8; 64];
             let mut dst = [0u8; 64];
             src[..mclen - i].copy_from_slice(&mc[i..]);
@@ -496,7 +494,7 @@ impl<const TAG_BYTES: usize> Aegis256X4<TAG_BYTES> {
             m[i..i + 64].copy_from_slice(&dst);
             i += 64;
         }
-        if clen % 64 != 0 {
+        if !clen.is_multiple_of(64) {
             state.dec_partial(&mut m[i..], &c[i..]);
         }
 
@@ -539,7 +537,7 @@ impl<const TAG_BYTES: usize> Aegis256X4<TAG_BYTES> {
             mc[i..i + 64].copy_from_slice(&dst);
             i += 64;
         }
-        if mclen % 64 != 0 {
+        if !mclen.is_multiple_of(64) {
             let remaining = mclen - i;
             let mut tmp = [0u8; 64];
             state.dec_partial(&mut tmp[..remaining], &mc[i..]);
@@ -660,11 +658,10 @@ impl IncrementalState {
         let mut offset = 0;
         if self.pos != 0 {
             let n = mc.len().min(64 - self.pos);
-            for j in 0..n {
-                let input = mc[j];
-                let output = input ^ self.buf[self.pos + j];
-                self.buf[self.pos + j] = if DECRYPT { output } else { input };
-                mc[j] = output;
+            for (byte, buffered) in mc[..n].iter_mut().zip(&mut self.buf[self.pos..]) {
+                let input = *byte;
+                *byte ^= *buffered;
+                *buffered = if DECRYPT { *byte } else { input };
             }
             self.pos += n;
             offset = n;
