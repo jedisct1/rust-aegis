@@ -15,10 +15,12 @@ include = [
     "/Makefile",
     "/README.md",
     "/LICENSE",
+    "/benches/**/*.rs",
     "/src/**/*.rs",
     "/src/test-vectors/*.json",
     "/src/c/libaegis/src/**/*.c",
     "/src/c/libaegis/src/**/*.h",
+    "/tests/**/*.rs",
     "/wasm-libs/libaegis.a",
     "/wasm-libs/libaegis_relaxed_simd.a",
 ]
