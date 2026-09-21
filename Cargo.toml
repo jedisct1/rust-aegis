@@ -56,6 +56,10 @@ bench = false
 name = "benchmark"
 harness = false
 
+[[bench]]
+name = "throughput"
+harness = false
+
 [features]
 default = ["std"]
 force-wasm-relaxed-simd = []
