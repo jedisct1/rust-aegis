@@ -1,3 +1,4 @@
+use core::convert::TryInto;
 use core::fmt;
 
 use super::{AesBlock, AesBlock2};
@@ -102,6 +103,35 @@ impl State {
             AesBlock::from_bytes(&src[48..64]),
         );
         self.update(m0, m1);
+    }
+
+    /// Unlike `enc`, this never feeds the message into the state, so the same call encrypts and decrypts.
+    /// `mc` can be shorter than a full block.
+    #[inline(always)]
+    fn xor_keystream(&mut self, mc: &mut [u8]) {
+        let mut z = [0u8; 64];
+        self.enc(&mut z, &[0u8; 64]);
+        for (byte, z) in mc.iter_mut().zip(z) {
+            *byte ^= z;
+        }
+    }
+
+    fn stream(&mut self, out: &mut [u8]) {
+        let mut blocks = out.chunks_exact_mut(64);
+        for block in &mut blocks {
+            self.enc(block.try_into().unwrap(), &[0u8; 64]);
+        }
+        let last = blocks.into_remainder();
+        last.fill(0);
+        self.xor_keystream(last);
+    }
+
+    fn stream_xor(&mut self, mc: &mut [u8]) {
+        let mut blocks = mc.chunks_exact_mut(64);
+        for block in &mut blocks {
+            self.xor_keystream(block);
+        }
+        self.xor_keystream(blocks.into_remainder());
     }
 
     fn absorb_ad(&mut self, ad: &[u8]) {
@@ -361,7 +391,9 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         }
     }
 
-    /// Encrypt a message
+    /// Encrypts a message, and authenticates it along with the associated data `ad`.
+    ///
+    /// Returns the ciphertext and the authentication tag.
     #[cfg(feature = "std")]
     pub fn encrypt(mut self, m: &[u8], ad: &[u8]) -> (Vec<u8>, Tag<TAG_BYTES>) {
         let state = &mut self.state;
@@ -391,7 +423,9 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         (c, tag)
     }
 
-    /// Encrypt in place
+    /// Encrypts `mc` in place, and authenticates it along with the associated data `ad`.
+    ///
+    /// Returns the authentication tag.
     pub fn encrypt_in_place(mut self, mc: &mut [u8], ad: &[u8]) -> Tag<TAG_BYTES> {
         let state = &mut self.state;
         let mclen = mc.len();
@@ -418,7 +452,9 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         state.mac::<TAG_BYTES>(adlen as u64, mclen as u64)
     }
 
-    /// Decrypt a message
+    /// Checks the tag, then returns the decrypted message.
+    ///
+    /// Fails with [`Error::InvalidTag`] if the ciphertext, the tag or the associated data don't match.
     #[cfg(feature = "std")]
     pub fn decrypt(mut self, c: &[u8], tag: &Tag<TAG_BYTES>, ad: &[u8]) -> Result<Vec<u8>, Error> {
         let state = &mut self.state;
@@ -452,7 +488,10 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
         Ok(m)
     }
 
-    /// Decrypt in place
+    /// Checks the tag, then decrypts `mc` in place.
+    ///
+    /// Fails with [`Error::InvalidTag`] if the ciphertext, the tag or the associated data don't match.
+    /// In that case, the buffer is erased.
     pub fn decrypt_in_place(
         mut self,
         mc: &mut [u8],
@@ -490,6 +529,39 @@ impl<const TAG_BYTES: usize> Aegis128X2<TAG_BYTES> {
             return Err(Error::InvalidTag);
         }
         Ok(())
+    }
+
+    /// Fills `out` with random-looking bytes derived from the key and the nonce.
+    ///
+    /// The same key and nonce always give the same bytes.
+    /// Don't use that key and nonce pair for anything else.
+    pub fn stream(mut self, out: &mut [u8]) {
+        self.state.stream(out);
+    }
+
+    /// Encrypts or decrypts a message WITHOUT AUTHENTICATION.
+    ///
+    /// Nothing detects tampering, so only use this if your protocol authenticates the data some other way.
+    ///
+    /// Never reuse a nonce with the same key, and don't use that key and nonce pair for anything else.
+    ///
+    /// Calling it again with the same key and nonce gives the message back.
+    #[cfg(feature = "std")]
+    pub fn stream_xor(self, m: &[u8]) -> Vec<u8> {
+        let mut out = m.to_vec();
+        self.stream_xor_in_place(&mut out);
+        out
+    }
+
+    /// Encrypts or decrypts a buffer in place WITHOUT AUTHENTICATION.
+    ///
+    /// Nothing detects tampering, so only use this if your protocol authenticates the data some other way.
+    ///
+    /// Never reuse a nonce with the same key, and don't use that key and nonce pair for anything else.
+    ///
+    /// Calling it again with the same key and nonce restores the buffer.
+    pub fn stream_xor_in_place(mut self, mc: &mut [u8]) {
+        self.state.stream_xor(mc);
     }
 
     /// Starts an incremental encryption of a single message.

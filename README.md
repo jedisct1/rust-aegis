@@ -1,6 +1,6 @@
 # AEGIS for Rust
 
-This is a Rust implementation of [AEGIS](https://datatracker.ietf.org/doc/draft-irtf-cfrg-aegis-aead/).
+This is a Rust implementation of [AEGIS](https://www.rfc-editor.org/rfc/rfc10032.html).
 
 AEGIS is a new family of authenticated encryption algorithms, offering high security and exceptional performance on modern desktop, server, and mobile CPUs.
 
@@ -93,6 +93,41 @@ If the tag turns out to be invalid, or if the decryptor is dropped before finali
 This means the destination must be sized for the complete message up front.
 
 The design is meant for messages that arrive in chunks, not for messages too large to hold in memory; the latter needs a record protocol that splits the stream into independently authenticated messages.
+
+# Keystream generation and unauthenticated encryption
+
+Every cipher can also be used as a fast deterministic random generator.
+`stream` fills a buffer with a pseudo-random byte sequence that only depends on the key and the nonce:
+
+```rust
+use aegis::aegis128l::Aegis128L;
+
+let key = [0u8; 16];
+let nonce = [0u8; 16];
+
+let mut out = [0u8; 100];
+Aegis128L::<16>::new(&key, &nonce).stream(&mut out);
+```
+
+`stream_xor` and `stream_xor_in_place` XOR a message with that same sequence.
+Applying the function a second time with the same key and nonce gives the message back:
+
+```rust
+use aegis::aegis128l::Aegis128L;
+
+let key = [0u8; 16];
+let nonce = [0u8; 16]; // Never reuse a nonce with the same key!
+
+let mut buf = *b"AEGIS is fast";
+Aegis128L::<16>::new(&key, &nonce).stream_xor_in_place(&mut buf);
+Aegis128L::<16>::new(&key, &nonce).stream_xor_in_place(&mut buf);
+assert_eq!(&buf, b"AEGIS is fast");
+```
+
+This is encryption WITHOUT AUTHENTICATION, in the spirit of AES-CTR.
+Only use it if your protocol authenticates the data some other way, and keep a key and nonce pair used here away from the authenticated functions.
+
+The tag length parameter has no effect on these functions.
 
 # Random Access Files (RAF)
 

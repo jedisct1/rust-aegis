@@ -93,6 +93,16 @@ extern "C" {
         k: *const u8,
     ) -> c_int;
 
+    fn aegis256x2_stream(out: *mut u8, len: usize, npub: *const u8, k: *const u8);
+
+    fn aegis256x2_stream_xor(
+        out: *mut u8,
+        input: *const u8,
+        len: usize,
+        npub: *const u8,
+        k: *const u8,
+    );
+
     fn aegis256x2_mac_init(st_: *mut aegis256x2_mac_state, k: *const u8, npub: *const u8);
 
     fn aegis256x2_mac_update(st_: *mut aegis256x2_mac_state, m: *const u8, mlen: usize) -> c_int;
@@ -177,12 +187,9 @@ impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
         }
     }
 
-    /// Encrypts a message using AEGIS-256X2
-    /// # Arguments
-    /// * `m` - Message
-    /// * `ad` - Associated data
-    /// # Returns
-    /// Encrypted message and authentication tag.
+    /// Encrypts a message, and authenticates it along with the associated data `ad`.
+    ///
+    /// Returns the ciphertext and the authentication tag.
     #[cfg(feature = "std")]
     pub fn encrypt(self, m: &[u8], ad: &[u8]) -> (Vec<u8>, Tag<TAG_BYTES>) {
         let mut c = vec![0u8; m.len()];
@@ -203,12 +210,9 @@ impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
         (c, tag)
     }
 
-    /// Encrypts a message in-place using AEGIS-256X2
-    /// # Arguments
-    /// * `mc` - Input and output buffer
-    /// * `ad` - Associated data
-    /// # Returns
-    /// Encrypted message and authentication tag.
+    /// Encrypts `mc` in place, and authenticates it along with the associated data `ad`.
+    ///
+    /// Returns the authentication tag.
     pub fn encrypt_in_place(self, mc: &mut [u8], ad: &[u8]) -> Tag<TAG_BYTES> {
         let mut tag = [0u8; TAG_BYTES];
         unsafe {
@@ -227,13 +231,9 @@ impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
         tag
     }
 
-    /// Decrypts a message using AEGIS-256X2
-    /// # Arguments
-    /// * `c` - Ciphertext
-    /// * `tag` - Authentication tag
-    /// * `ad` - Associated data
-    /// # Returns
-    /// Decrypted message.
+    /// Checks the tag, then returns the decrypted message.
+    ///
+    /// Fails with [`Error::InvalidTag`] if the ciphertext, the tag or the associated data don't match.
     #[cfg(feature = "std")]
     pub fn decrypt(&self, c: &[u8], tag: &Tag<TAG_BYTES>, ad: &[u8]) -> Result<Vec<u8>, Error> {
         let mut m = vec![0u8; c.len()];
@@ -256,11 +256,10 @@ impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
         Ok(m)
     }
 
-    /// Decrypts a message in-place using AEGIS-256X2
-    /// # Arguments
-    /// * `mc` - Input and output buffer
-    /// * `tag` - Authentication tag
-    /// * `ad` - Associated data
+    /// Checks the tag, then decrypts `mc` in place.
+    ///
+    /// Fails with [`Error::InvalidTag`] if the ciphertext, the tag or the associated data don't match.
+    /// In that case, the buffer is erased.
     pub fn decrypt_in_place(
         &self,
         mc: &mut [u8],
@@ -284,6 +283,62 @@ impl<const TAG_BYTES: usize> Aegis256X2<TAG_BYTES> {
             return Err(Error::InvalidTag);
         }
         Ok(())
+    }
+
+    /// Fills `out` with random-looking bytes derived from the key and the nonce.
+    ///
+    /// The same key and nonce always give the same bytes.
+    /// Don't use that key and nonce pair for anything else.
+    pub fn stream(self, out: &mut [u8]) {
+        unsafe {
+            aegis256x2_stream(
+                out.as_mut_ptr(),
+                out.len(),
+                self.nonce.as_ptr(),
+                self.key.as_ptr(),
+            );
+        }
+    }
+
+    /// Encrypts or decrypts a message WITHOUT AUTHENTICATION.
+    ///
+    /// Nothing detects tampering, so only use this if your protocol authenticates the data some other way.
+    ///
+    /// Never reuse a nonce with the same key, and don't use that key and nonce pair for anything else.
+    ///
+    /// Calling it again with the same key and nonce gives the message back.
+    #[cfg(feature = "std")]
+    pub fn stream_xor(self, m: &[u8]) -> Vec<u8> {
+        let mut out = vec![0u8; m.len()];
+        unsafe {
+            aegis256x2_stream_xor(
+                out.as_mut_ptr(),
+                m.as_ptr(),
+                m.len(),
+                self.nonce.as_ptr(),
+                self.key.as_ptr(),
+            );
+        }
+        out
+    }
+
+    /// Encrypts or decrypts a buffer in place WITHOUT AUTHENTICATION.
+    ///
+    /// Nothing detects tampering, so only use this if your protocol authenticates the data some other way.
+    ///
+    /// Never reuse a nonce with the same key, and don't use that key and nonce pair for anything else.
+    ///
+    /// Calling it again with the same key and nonce restores the buffer.
+    pub fn stream_xor_in_place(self, mc: &mut [u8]) {
+        unsafe {
+            aegis256x2_stream_xor(
+                mc.as_mut_ptr(),
+                mc.as_ptr(),
+                mc.len(),
+                self.nonce.as_ptr(),
+                self.key.as_ptr(),
+            );
+        }
     }
 
     /// Starts an incremental encryption of a single message.

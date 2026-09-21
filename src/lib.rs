@@ -62,6 +62,8 @@ pub mod compat;
 #[cfg(test)]
 mod incremental_tests;
 #[cfg(test)]
+mod stream_tests;
+#[cfg(test)]
 mod tests;
 
 #[cfg(test)]
