@@ -44,7 +44,7 @@ $(RELAXED_SIMD_LIBRARY): $(LIBAEGIS_INPUTS)
 clean-wasm-build:
 	$(RM) -r "$(BASELINE_BUILD_DIR)" "$(RELAXED_SIMD_BUILD_DIR)"
 
-# The archives in wasm-libs are checked in and shipped with the crate, so they are kept.
+# The wasm-libs archives are checked in, so they stay.
 clean: clean-wasm-build
 	$(RM) -r "$(LIBAEGIS_DIR)/.zig-cache" "$(LIBAEGIS_DIR)/zig-out"
 	$(CARGO) clean
