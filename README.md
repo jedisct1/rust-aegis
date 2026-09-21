@@ -269,6 +269,7 @@ RAF works on WebAssembly targets:
 AEGIS is very fast on CPUs with parallel execution pipelines and AES support.
 
 Benchmarks can be reproduced using `export CC="clang -O3 -march=native"` and the `cargo bench` or `cargo-zigbuild bench` commands.
+Add `--features boring` to include BoringSSL in the comparison.
 
 For performance, `clang` is recommended over `gcc`.
 
