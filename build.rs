@@ -108,6 +108,7 @@ fn main() {
         .file("src/c/libaegis/src/aegis256x4/aegis256x4_neon_aes.c")
         .file("src/c/libaegis/src/aegis256x4/aegis256x4_avx2.c")
         .file("src/c/libaegis/src/aegis256x4/aegis256x4_avx512.c")
+        .file("src/c/libaegis/src/aegis256x4/aegis256x4_avx512vl.c")
         .file("src/c/libaegis/src/aegis256x4/aegis256x4_soft.c")
         .file("src/c/libaegis/src/common/common.c")
         .file("src/c/libaegis/src/common/cpu.c")
