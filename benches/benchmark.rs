@@ -248,28 +248,28 @@ fn main() {
         let state = Aegis128X4Mac::<32>::new(&[0u8; 16]);
         let res = bench.run(options, || test_aegis128x4_mac(&state, &m));
         println!(
-            "aegis128x4-mac                  : {}",
+            "aegis128x4-mac             : {}",
             res.throughput_bits(m.len() as _)
         );
 
         let state = Aegis128X2Mac::<32>::new(&[0u8; 16]);
         let res = bench.run(options, || test_aegis128x2_mac(&state, &m));
         println!(
-            "aegis128x2-mac                  : {}",
+            "aegis128x2-mac             : {}",
             res.throughput_bits(m.len() as _)
         );
 
         let state = Aegis128LMac::<32>::new(&[0u8; 16]);
         let res = bench.run(options, || test_aegis128l_mac(&state, &m));
         println!(
-            "aegis128l-mac                   : {}",
+            "aegis128l-mac              : {}",
             res.throughput_bits(m.len() as _)
         );
 
         let sthash = sthash::Hasher::new(sthash::Key::from_seed(&[0u8; 32], None), None);
         let res = bench.run(options, || sthash.hash(&m));
         println!(
-            "sthash                          : {}",
+            "sthash                     : {}",
             res.throughput_bits(m.len() as _)
         );
 
@@ -277,7 +277,7 @@ fn main() {
         {
             let res = bench.run(options, || test_hmac_sha256(&m));
             println!(
-                "hmac-sha256 (boring)            : {}",
+                "hmac-sha256 (boring)       : {}",
                 res.throughput_bits(m.len() as _)
             );
         }
@@ -285,7 +285,7 @@ fn main() {
         let b3 = blake3::Hasher::new_keyed(&[0u8; 32]);
         let res = bench.run(options, || b3.clone().update(&m).finalize());
         println!(
-            "blake3                          : {}",
+            "blake3                     : {}",
             res.throughput_bits(m.len() as _)
         );
 
@@ -299,43 +299,43 @@ fn main() {
 
     let res = bench.run(options, || test_aegis128x4(&mut m));
     println!(
-        "aegis128x4                      : {}",
+        "aegis128x4                 : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis128x2(&mut m));
     println!(
-        "aegis128x2                      : {}",
+        "aegis128x2                 : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis128l(&mut m));
     println!(
-        "aegis128l                       : {}",
+        "aegis128l                  : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256x2(&mut m));
     println!(
-        "aegis256x2                      : {}",
+        "aegis256x2                 : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256x4(&mut m));
     println!(
-        "aegis256x4                      : {}",
+        "aegis256x4                 : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256(&mut m));
     println!(
-        "aegis256                        : {}",
+        "aegis256                   : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aes128gcm(&mut m));
     println!(
-        "aes128-gcm (rust aes-gcm crate) : {}",
+        "aes128-gcm (aes-gcm crate) : {}",
         res.throughput_bits(m.len() as _)
     );
 
@@ -343,14 +343,14 @@ fn main() {
     {
         let res = bench.run(options, || test_aes128gcm_boringssl(&mut m));
         println!(
-            "aes128-gcm (boring)             : {}",
+            "aes128-gcm (boring)        : {}",
             res.throughput_bits(m.len() as _)
         );
     }
 
     let res = bench.run(options, || test_aes256gcm(&mut m));
     println!(
-        "aes256-gcm (rust aes-gcm crate) : {}",
+        "aes256-gcm (aes-gcm crate) : {}",
         res.throughput_bits(m.len() as _)
     );
 
@@ -358,20 +358,20 @@ fn main() {
     {
         let res = bench.run(options, || test_aes256gcm_boringssl(&mut m));
         println!(
-            "aes256-gcm (boring)             : {}",
+            "aes256-gcm (boring)        : {}",
             res.throughput_bits(m.len() as _)
         );
     }
 
     let res = bench.run(options, || test_chacha20poly1305(&mut m));
     println!(
-        "chacha20-poly1305               : {}",
+        "chacha20-poly1305          : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_ascon128a(&mut m));
     println!(
-        "ascon128a                       : {}",
+        "ascon128a                  : {}",
         res.throughput_bits(m.len() as _)
     );
 
@@ -381,37 +381,37 @@ fn main() {
 
     let res = bench.run(options, || test_aegis128x4_stream(&mut m));
     println!(
-        "aegis128x4-stream               : {}",
+        "aegis128x4-stream          : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis128x2_stream(&mut m));
     println!(
-        "aegis128x2-stream               : {}",
+        "aegis128x2-stream          : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis128l_stream(&mut m));
     println!(
-        "aegis128l-stream                : {}",
+        "aegis128l-stream           : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256x2_stream(&mut m));
     println!(
-        "aegis256x2-stream               : {}",
+        "aegis256x2-stream          : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256x4_stream(&mut m));
     println!(
-        "aegis256x4-stream               : {}",
+        "aegis256x4-stream          : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256_stream(&mut m));
     println!(
-        "aegis256-stream                 : {}",
+        "aegis256-stream            : {}",
         res.throughput_bits(m.len() as _)
     );
 
@@ -421,37 +421,37 @@ fn main() {
 
     let res = bench.run(options, || test_aegis128x4_stream_xor(&mut m));
     println!(
-        "aegis128x4-stream-xor           : {}",
+        "aegis128x4-stream-xor      : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis128x2_stream_xor(&mut m));
     println!(
-        "aegis128x2-stream-xor           : {}",
+        "aegis128x2-stream-xor      : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis128l_stream_xor(&mut m));
     println!(
-        "aegis128l-stream-xor            : {}",
+        "aegis128l-stream-xor       : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256x2_stream_xor(&mut m));
     println!(
-        "aegis256x2-stream-xor           : {}",
+        "aegis256x2-stream-xor      : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256x4_stream_xor(&mut m));
     println!(
-        "aegis256x4-stream-xor           : {}",
+        "aegis256x4-stream-xor      : {}",
         res.throughput_bits(m.len() as _)
     );
 
     let res = bench.run(options, || test_aegis256_stream_xor(&mut m));
     println!(
-        "aegis256-stream-xor             : {}",
+        "aegis256-stream-xor        : {}",
         res.throughput_bits(m.len() as _)
     );
 }
