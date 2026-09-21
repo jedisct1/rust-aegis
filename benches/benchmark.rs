@@ -15,6 +15,7 @@ use aes_gcm::{
 };
 use benchmark_simple::*;
 use chacha20poly1305::ChaCha20Poly1305;
+use ctr::cipher::{KeyIvInit as _, StreamCipher as _};
 
 fn test_aes256gcm(m: &mut [u8]) {
     let key = aes_gcm::Key::<Aes256Gcm>::from([0u8; 32]);
@@ -61,13 +62,33 @@ fn test_chacha20poly1305(m: &mut [u8]) {
     state.encrypt_inout_detached(&nonce, &[], m.into()).unwrap();
 }
 
-fn test_ascon128a(m: &mut [u8]) {
+fn test_ascon_aead128(m: &mut [u8]) {
     let key = [0u8; 16];
     let nonce = [0u8; 16];
     let state = ascon_aead::AsconAead128::new((&key).into());
     state
         .encrypt_inout_detached((&nonce).into(), &[], m.into())
         .unwrap();
+}
+
+fn test_aes128ctr(m: &mut [u8]) {
+    let mut state = ctr::Ctr128BE::<aes::Aes128>::new(&[0u8; 16].into(), &[0u8; 16].into());
+    state.apply_keystream(black_box(m));
+}
+
+fn test_aes256ctr(m: &mut [u8]) {
+    let mut state = ctr::Ctr128BE::<aes::Aes256>::new(&[0u8; 32].into(), &[0u8; 16].into());
+    state.apply_keystream(black_box(m));
+}
+
+fn test_aes128ctr_stream(m: &mut [u8]) {
+    let mut state = ctr::Ctr128BE::<aes::Aes128>::new(&[0u8; 16].into(), &[0u8; 16].into());
+    state.write_keystream(black_box(m));
+}
+
+fn test_aes256ctr_stream(m: &mut [u8]) {
+    let mut state = ctr::Ctr128BE::<aes::Aes256>::new(&[0u8; 32].into(), &[0u8; 16].into());
+    state.write_keystream(black_box(m));
 }
 
 fn test_aegis128l(m: &mut [u8]) {
@@ -219,11 +240,7 @@ fn test_aegis128x4_mac(state: &Aegis128X4Mac<32>, m: &[u8]) {
 
 #[cfg(all(not(feature = "pure-rust"), feature = "boring"))]
 fn test_hmac_sha256(m: &[u8]) {
-    let md = boring::hash::MessageDigest::sha256();
-    let mut h1 = boring::hash::hash(md, m).unwrap().to_vec();
-    h1.resize(128, 0);
-    let h2 = boring::hash::hash(md, &h1).unwrap().to_vec();
-    black_box(h2);
+    black_box(boring::hash::hmac_sha256(&[0u8; 32], m).unwrap());
 }
 
 fn main() {
@@ -369,15 +386,26 @@ fn main() {
         res.throughput_bits(m.len() as _)
     );
 
-    let res = bench.run(options, || test_ascon128a(&mut m));
+    let res = bench.run(options, || test_ascon_aead128(&mut m));
     println!(
-        "ascon128a                  : {}",
+        "ascon-aead128              : {}",
         res.throughput_bits(m.len() as _)
     );
 
     println!();
     println!("* Keystream generation:");
     println!();
+
+    let res = bench.run(options, || test_aes128ctr_stream(&mut m));
+    println!(
+        "aes128-ctr                 : {}",
+        res.throughput_bits(m.len() as _)
+    );
+    let res = bench.run(options, || test_aes256ctr_stream(&mut m));
+    println!(
+        "aes256-ctr                 : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     let res = bench.run(options, || test_aegis128x4_stream(&mut m));
     println!(
@@ -418,6 +446,17 @@ fn main() {
     println!();
     println!("* Unauthenticated encryption:");
     println!();
+
+    let res = bench.run(options, || test_aes128ctr(&mut m));
+    println!(
+        "aes128-ctr                 : {}",
+        res.throughput_bits(m.len() as _)
+    );
+    let res = bench.run(options, || test_aes256ctr(&mut m));
+    println!(
+        "aes256-ctr                 : {}",
+        res.throughput_bits(m.len() as _)
+    );
 
     let res = bench.run(options, || test_aegis128x4_stream_xor(&mut m));
     println!(
