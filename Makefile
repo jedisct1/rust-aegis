@@ -1,4 +1,5 @@
 ZIG ?= zig
+CARGO ?= cargo
 
 LIBAEGIS_DIR := $(CURDIR)/src/c/libaegis
 LIBAEGIS_BUILD := $(LIBAEGIS_DIR)/build.zig
@@ -15,7 +16,7 @@ BASELINE_PREFIX := $(BASELINE_BUILD_DIR)/install
 RELAXED_SIMD_PREFIX := $(RELAXED_SIMD_BUILD_DIR)/install
 
 .DELETE_ON_ERROR:
-.PHONY: all wasm-libs clean-wasm-build
+.PHONY: all wasm-libs clean clean-wasm-build
 
 all: wasm-libs
 
@@ -42,3 +43,8 @@ $(RELAXED_SIMD_LIBRARY): $(LIBAEGIS_INPUTS)
 
 clean-wasm-build:
 	$(RM) -r "$(BASELINE_BUILD_DIR)" "$(RELAXED_SIMD_BUILD_DIR)"
+
+# The archives in wasm-libs are checked in and shipped with the crate, so they are kept.
+clean: clean-wasm-build
+	$(RM) -r "$(LIBAEGIS_DIR)/.zig-cache" "$(LIBAEGIS_DIR)/zig-out"
+	$(CARGO) clean
