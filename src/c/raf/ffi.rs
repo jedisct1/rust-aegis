@@ -1,4 +1,5 @@
 use core::ffi::{c_int, c_void};
+use core::mem::MaybeUninit;
 
 #[repr(C)]
 pub struct aegis_raf_scratch {
@@ -68,7 +69,7 @@ macro_rules! define_raf_ctx {
         #[repr(C)]
         #[repr(align($align))]
         pub struct $name {
-            pub opaque: [u8; 512],
+            pub opaque: [MaybeUninit<u8>; 512],
         }
     };
 }

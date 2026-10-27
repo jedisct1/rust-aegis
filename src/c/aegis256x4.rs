@@ -21,7 +21,7 @@ struct aegis256x4_state {
 #[repr(C)]
 #[repr(align(64))]
 struct aegis256x4_mac_state {
-    opaque: [u8; 960],
+    opaque: [MaybeUninit<u8>; 960],
 }
 
 // Must stay in sync with the bundled aegis256x4.h.

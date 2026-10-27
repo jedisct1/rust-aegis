@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::mem::MaybeUninit;
 use std::pin::Pin;
 
 use super::algorithm::Algorithm;
@@ -20,7 +21,7 @@ pub(crate) const AEGIS_RAF_TRUNCATE: u8 = 0x02;
 #[repr(C)]
 #[repr(align(64))]
 struct RafCtxStorage {
-    opaque: [u8; 512],
+    opaque: [MaybeUninit<u8>; 512],
 }
 
 /// An open encrypted random-access file.
@@ -44,11 +45,11 @@ pub struct Raf<A: Algorithm> {
 
 impl<A: Algorithm> Raf<A> {
     fn ctx_ptr(&mut self) -> *mut u8 {
-        self.ctx.opaque.as_mut_ptr()
+        self.ctx.opaque.as_mut_ptr().cast()
     }
 
     fn ctx_ptr_const(&self) -> *const u8 {
-        self.ctx.opaque.as_ptr()
+        self.ctx.opaque.as_ptr().cast()
     }
 
     /// Derives a context-bound RAF key from an application master key.
@@ -297,10 +298,12 @@ impl<A: Algorithm> RafBuilder<A> {
             flags: self.flags | AEGIS_RAF_CREATE,
         };
 
-        let mut ctx = Box::new(RafCtxStorage { opaque: [0u8; 512] });
+        let mut ctx = Box::new(RafCtxStorage {
+            opaque: [MaybeUninit::new(0); 512],
+        });
         let ret = unsafe {
             A::ffi_create(
-                ctx.opaque.as_mut_ptr(),
+                ctx.opaque.as_mut_ptr().cast(),
                 &io_ffi,
                 &rng_ffi,
                 &cfg,
@@ -370,10 +373,12 @@ impl<A: Algorithm> RafBuilder<A> {
             flags: 0,
         };
 
-        let mut ctx = Box::new(RafCtxStorage { opaque: [0u8; 512] });
+        let mut ctx = Box::new(RafCtxStorage {
+            opaque: [MaybeUninit::new(0); 512],
+        });
         let ret = unsafe {
             A::ffi_open(
-                ctx.opaque.as_mut_ptr(),
+                ctx.opaque.as_mut_ptr().cast(),
                 &io_ffi,
                 &rng_ffi,
                 &cfg,

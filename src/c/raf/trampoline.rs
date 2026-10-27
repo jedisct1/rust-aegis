@@ -7,6 +7,17 @@ use super::io::RafIo;
 use super::merkle::MerkleHasher;
 use super::rng::RafRng;
 
+// For a nonempty buffer, out must be writable and exclusively accessible for len bytes.
+unsafe fn initialized_output<'a>(out: *mut u8, len: usize) -> &'a mut [u8] {
+    if len == 0 {
+        return &mut [];
+    }
+    unsafe {
+        out.write_bytes(0, len);
+        std::slice::from_raw_parts_mut(out, len)
+    }
+}
+
 fn io_err_to_errno(e: &std::io::Error) -> i32 {
     e.raw_os_error().unwrap_or(EIO)
 }
@@ -59,7 +70,7 @@ impl<'a> IoShimRef<'a> {
 
 unsafe extern "C" fn io_read_at(user: *mut c_void, buf: *mut u8, len: usize, off: u64) -> c_int {
     let shim = unsafe { &mut *(user as *mut IoShim) };
-    let slice = unsafe { std::slice::from_raw_parts_mut(buf, len) };
+    let slice = unsafe { initialized_output(buf, len) };
     match shim.inner.read_at(slice, off) {
         Ok(()) => 0,
         Err(e) => {
@@ -124,7 +135,7 @@ unsafe extern "C" fn io_read_at_ref(
     off: u64,
 ) -> c_int {
     let shim = unsafe { &mut *(user as *mut IoShimRef<'_>) };
-    let slice = unsafe { std::slice::from_raw_parts_mut(buf, len) };
+    let slice = unsafe { initialized_output(buf, len) };
     match shim.inner.read_at(slice, off) {
         Ok(()) => 0,
         Err(e) => {
@@ -207,7 +218,7 @@ impl RngShim {
 
 unsafe extern "C" fn rng_random(user: *mut c_void, out: *mut u8, len: usize) -> c_int {
     let shim = unsafe { &mut *(user as *mut RngShim) };
-    let slice = unsafe { std::slice::from_raw_parts_mut(out, len) };
+    let slice = unsafe { initialized_output(out, len) };
     match shim.inner.fill(slice) {
         Ok(()) => 0,
         Err(_) => {
@@ -280,7 +291,7 @@ unsafe extern "C" fn merkle_hash_leaf(
     chunk_idx: u64,
 ) -> c_int {
     let shim = unsafe { &*(user as *const MerkleShim) };
-    let out_slice = unsafe { std::slice::from_raw_parts_mut(out, out_len) };
+    let out_slice = unsafe { initialized_output(out, out_len) };
     let chunk_slice = unsafe { std::slice::from_raw_parts(chunk, chunk_len) };
     match shim.hasher.hash_leaf(out_slice, chunk_slice, chunk_idx) {
         Ok(()) => 0,
@@ -302,7 +313,7 @@ unsafe extern "C" fn merkle_hash_parent(
 ) -> c_int {
     let shim = unsafe { &*(user as *const MerkleShim) };
     let hash_len = shim.hash_len;
-    let out_slice = unsafe { std::slice::from_raw_parts_mut(out, out_len) };
+    let out_slice = unsafe { initialized_output(out, out_len) };
     let left_slice = unsafe { std::slice::from_raw_parts(left, hash_len) };
     let right_slice = unsafe { std::slice::from_raw_parts(right, hash_len) };
     match shim
@@ -325,7 +336,7 @@ unsafe extern "C" fn merkle_hash_empty(
     node_idx: u64,
 ) -> c_int {
     let shim = unsafe { &*(user as *const MerkleShim) };
-    let out_slice = unsafe { std::slice::from_raw_parts_mut(out, out_len) };
+    let out_slice = unsafe { initialized_output(out, out_len) };
     match shim.hasher.hash_empty(out_slice, level, node_idx) {
         Ok(()) => 0,
         Err(_) => {
@@ -346,9 +357,13 @@ unsafe extern "C" fn merkle_hash_commitment(
 ) -> c_int {
     let shim = unsafe { &*(user as *const MerkleShim) };
     let hash_len = shim.hash_len;
-    let out_slice = unsafe { std::slice::from_raw_parts_mut(out, out_len) };
+    let out_slice = unsafe { initialized_output(out, out_len) };
     let root_slice = unsafe { std::slice::from_raw_parts(structural_root, hash_len) };
-    let ctx_slice = unsafe { std::slice::from_raw_parts(ctx, ctx_len) };
+    let ctx_slice = if ctx_len == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(ctx, ctx_len) }
+    };
     match shim
         .hasher
         .hash_commitment(out_slice, root_slice, ctx_slice, file_size)

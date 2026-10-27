@@ -21,7 +21,7 @@ struct aegis128l_state {
 #[repr(C)]
 #[repr(align(32))]
 struct aegis128l_mac_state {
-    opaque: [u8; 384],
+    opaque: [MaybeUninit<u8>; 384],
 }
 
 // Must stay in sync with the bundled aegis128l.h.
