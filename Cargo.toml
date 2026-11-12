@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "0.9.20"
+version = "0.9.21"
 edition = "2018"
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "AEGIS authenticated encryption (AEAD) and MACs with AES acceleration, streaming APIs, and no_std support"
