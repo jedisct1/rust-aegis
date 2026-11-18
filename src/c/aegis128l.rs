@@ -14,7 +14,7 @@ pub type Nonce = [u8; 16];
 #[repr(C)]
 #[repr(align(32))]
 struct aegis128l_state {
-    opaque: [u8; 256],
+    opaque: [MaybeUninit<u8>; 256],
 }
 
 #[allow(non_camel_case_types)]
