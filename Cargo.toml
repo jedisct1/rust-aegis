@@ -6,7 +6,6 @@ authors = ["Frank Denis <github@pureftpd.org>"]
 description = "AEGIS authenticated encryption (AEAD) and MACs with AES acceleration, streaming APIs, and no_std support"
 keywords = ["aead", "encryption", "aegis", "aes", "no-std"]
 license = "MIT"
-homepage = "https://github.com/jedisct1/rust-aegis"
 repository = "https://github.com/jedisct1/rust-aegis"
 categories = ["no-std", "cryptography"]
 readme = "README.md"
